@@ -26,6 +26,26 @@ set(SOURCES
     src/ExplorerPlugin.h
     src/ExplorerWidget.cpp
     src/ExplorerWidget.h
+    src/Style.h
+    src/services/MockIndexerService.cpp
+    src/services/MockIndexerService.h
+    src/services/IndexerService.h
+    src/models/Block.h
+    src/models/Transaction.h
+    src/models/Account.h
+    src/widgets/SearchBar.cpp
+    src/widgets/SearchBar.h
+    src/widgets/NavigationBar.cpp
+    src/widgets/NavigationBar.h
+    src/widgets/ClickableFrame.h
+    src/pages/MainPage.cpp
+    src/pages/MainPage.h
+    src/pages/BlockPage.cpp
+    src/pages/BlockPage.h
+    src/pages/TransactionPage.cpp
+    src/pages/TransactionPage.h
+    src/pages/AccountPage.cpp
+    src/pages/AccountPage.h
 )
 
 # Create the plugin library
