@@ -315,6 +315,19 @@ void MainPage::showSearchResults(const SearchResults& results)
     m_contentLayout->insertWidget(0, m_searchResultsWidget);
 }
 
+void MainPage::onNewBlock(const Block& block)
+{
+    if (!m_blocksLayout) return;
+
+    m_healthLabel->setText(QString("Chain height: %1").arg(block.blockId));
+
+    // Append to layout then move to top (index 0)
+    addBlockRow(m_blocksLayout, block);
+    auto* newRow = m_blocksLayout->itemAt(m_blocksLayout->count() - 1)->widget();
+    m_blocksLayout->removeWidget(newRow);
+    m_blocksLayout->insertWidget(0, newRow);
+}
+
 void MainPage::clearSearchResults()
 {
     if (m_searchResultsWidget) {

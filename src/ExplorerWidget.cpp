@@ -47,6 +47,10 @@ ExplorerWidget::ExplorerWidget(QWidget* parent)
     connect(m_navBar, &NavigationBar::homeClicked, this, &ExplorerWidget::navigateHome);
     connect(m_searchBar, &SearchBar::searchRequested, this, &ExplorerWidget::onSearch);
 
+    connect(m_indexer.get(), &IndexerService::newBlockAdded, this, [this](const Block& block) {
+        m_mainPage->onNewBlock(block);
+    });
+
     updateNavButtons();
 }
 

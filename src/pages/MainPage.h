@@ -18,6 +18,7 @@ public:
     void refresh();
     void showSearchResults(const SearchResults& results);
     void clearSearchResults();
+    void onNewBlock(const Block& block);
 
 signals:
     void blockClicked(quint64 blockId);

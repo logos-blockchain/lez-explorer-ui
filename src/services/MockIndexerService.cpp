@@ -31,9 +31,68 @@ QString randomBase58String(int length)
 
 } // namespace
 
-MockIndexerService::MockIndexerService()
+MockIndexerService::MockIndexerService(QObject* parent)
+    : IndexerService(parent)
 {
     generateData();
+
+    connect(&m_blockTimer, &QTimer::timeout, this, &MockIndexerService::onGenerateBlock);
+    m_blockTimer.start(30000); // 30 seconds
+}
+
+Block MockIndexerService::generateBlock(quint64 blockId, const QString& prevHash)
+{
+    auto* rng = QRandomGenerator::global();
+
+    Block block;
+    block.blockId = blockId;
+    block.prevBlockHash = prevHash;
+    block.hash = randomHash();
+    block.timestamp = QDateTime::currentDateTimeUtc();
+    block.signature = randomHexString(64);
+    block.bedrockParentId = randomHexString(32);
+    block.bedrockStatus = BedrockStatus::Pending;
+
+    int txCount = rng->bounded(1, 6);
+    for (int t = 0; t < txCount; ++t) {
+        Transaction tx;
+        int typeRoll = rng->bounded(100);
+        if (typeRoll < 60) {
+            tx = generatePublicTransaction();
+        } else if (typeRoll < 85) {
+            tx = generatePrivacyPreservingTransaction();
+        } else {
+            tx = generateProgramDeploymentTransaction();
+        }
+        block.transactions.append(tx);
+        m_transactionsByHash[tx.hash] = tx;
+
+        for (const auto& accRef : tx.accounts) {
+            if (!m_accounts.contains(accRef.accountId)) {
+                Account acc;
+                acc.accountId = accRef.accountId;
+                acc.programOwner = randomBase58String(44);
+                acc.balance = QString::number(rng->bounded(0, 1000000));
+                acc.nonce = accRef.nonce;
+                acc.dataSizeBytes = rng->bounded(0, 4096);
+                m_accounts[acc.accountId] = acc;
+            }
+        }
+    }
+
+    return block;
+}
+
+void MockIndexerService::onGenerateBlock()
+{
+    quint64 newId = m_blocks.isEmpty() ? 1 : m_blocks.last().blockId + 1;
+    QString prevHash = m_blocks.isEmpty() ? QString(64, '0') : m_blocks.last().hash;
+
+    Block block = generateBlock(newId, prevHash);
+    m_blocks.append(block);
+    m_blocksByHash[block.hash] = block;
+
+    emit newBlockAdded(block);
 }
 
 QString MockIndexerService::randomHash()
