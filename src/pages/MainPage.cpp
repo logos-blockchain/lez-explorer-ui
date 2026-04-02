@@ -217,7 +217,7 @@ void MainPage::refresh()
 
     if (m_recentBlocksWidget) {
         m_contentLayout->removeWidget(m_recentBlocksWidget);
-        delete m_recentBlocksWidget;
+        m_recentBlocksWidget->deleteLater();
         m_recentBlocksWidget = nullptr;
         m_blocksLayout = nullptr;
         m_loadMoreBtn = nullptr;
@@ -322,8 +322,14 @@ void MainPage::onNewBlock(const Block& block)
     m_healthLabel->setText(QString("Chain height: %1").arg(block.blockId));
 
     // Append to layout then move to top (index 0)
+    int countBefore = m_blocksLayout->count();
     addBlockRow(m_blocksLayout, block);
-    auto* newRow = m_blocksLayout->itemAt(m_blocksLayout->count() - 1)->widget();
+    if (m_blocksLayout->count() <= countBefore) return;
+
+    QLayoutItem* item = m_blocksLayout->itemAt(m_blocksLayout->count() - 1);
+    if (!item || !item->widget()) return;
+
+    QWidget* newRow = item->widget();
     m_blocksLayout->removeWidget(newRow);
     m_blocksLayout->insertWidget(0, newRow);
 }
@@ -332,7 +338,7 @@ void MainPage::clearSearchResults()
 {
     if (m_searchResultsWidget) {
         m_contentLayout->removeWidget(m_searchResultsWidget);
-        delete m_searchResultsWidget;
+        m_searchResultsWidget->deleteLater();
         m_searchResultsWidget = nullptr;
     }
     if (m_recentBlocksWidget) {

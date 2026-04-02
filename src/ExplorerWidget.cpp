@@ -122,23 +122,32 @@ void ExplorerWidget::navigateTo(const NavTarget& target, bool addToHistory)
         } else if constexpr (std::is_same_v<T, NavBlock>) {
             auto block = m_indexer->getBlockById(t.blockId);
             if (block) {
-                auto* page = new BlockPage(*block);
+                auto* page = new BlockPage(*block, this);
                 connectPageSignals(page);
                 showPage(page);
+            } else {
+                qWarning("Block #%llu not found", static_cast<unsigned long long>(t.blockId));
+                showPage(m_mainPage);
             }
         } else if constexpr (std::is_same_v<T, NavTransaction>) {
             auto tx = m_indexer->getTransaction(t.hash);
             if (tx) {
-                auto* page = new TransactionPage(*tx);
+                auto* page = new TransactionPage(*tx, this);
                 connectPageSignals(page);
                 showPage(page);
+            } else {
+                qWarning("Transaction %s not found", qPrintable(t.hash));
+                showPage(m_mainPage);
             }
         } else if constexpr (std::is_same_v<T, NavAccount>) {
             auto account = m_indexer->getAccount(t.accountId);
             if (account) {
-                auto* page = new AccountPage(*account, m_indexer.get());
+                auto* page = new AccountPage(*account, m_indexer.get(), this);
                 connectPageSignals(page);
                 showPage(page);
+            } else {
+                qWarning("Account %s not found", qPrintable(t.accountId));
+                showPage(m_mainPage);
             }
         }
     }, target);
