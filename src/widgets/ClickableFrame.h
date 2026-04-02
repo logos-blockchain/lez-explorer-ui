@@ -1,5 +1,7 @@
 #pragma once
 
+#include "Style.h"
+
 #include <QFrame>
 #include <QMouseEvent>
 
@@ -24,4 +26,22 @@ protected:
         }
         QFrame::mousePressEvent(event);
     }
+
+    void enterEvent(QEnterEvent* event) override
+    {
+        m_baseStyleSheet = styleSheet();
+        setStyleSheet(m_baseStyleSheet +
+            QString(" ClickableFrame { background: %1 !important; border-color: %2 !important; }")
+                .arg(Style::Color::surfaceHover(), Style::Color::accent()));
+        QFrame::enterEvent(event);
+    }
+
+    void leaveEvent(QEvent* event) override
+    {
+        setStyleSheet(m_baseStyleSheet);
+        QFrame::leaveEvent(event);
+    }
+
+private:
+    QString m_baseStyleSheet;
 };

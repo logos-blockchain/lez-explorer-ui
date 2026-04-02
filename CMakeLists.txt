@@ -8,7 +8,7 @@ set(CMAKE_AUTORCC ON)
 set(CMAKE_AUTOUIC ON)
 
 # Find Qt packages
-find_package(Qt6 REQUIRED COMPONENTS Core Widgets)
+find_package(Qt6 REQUIRED COMPONENTS Core Widgets Svg SvgWidgets)
 
 # Try to find the component-interfaces package first
 find_package(component-interfaces QUIET)
@@ -46,6 +46,7 @@ set(SOURCES
     src/pages/TransactionPage.h
     src/pages/AccountPage.cpp
     src/pages/AccountPage.h
+    src/explorer_resources.qrc
 )
 
 # Create the plugin library
@@ -68,6 +69,8 @@ target_include_directories(lez_explorer_ui PRIVATE
 target_link_libraries(lez_explorer_ui PRIVATE
     Qt6::Core
     Qt6::Widgets
+    Qt6::Svg
+    Qt6::SvgWidgets
     component-interfaces
 )
 

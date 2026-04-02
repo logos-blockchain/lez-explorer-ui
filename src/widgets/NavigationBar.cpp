@@ -1,32 +1,50 @@
 #include "NavigationBar.h"
+#include "Style.h"
 
 #include <QHBoxLayout>
 #include <QPushButton>
+#include <QLabel>
+#include <QIcon>
 
 NavigationBar::NavigationBar(QWidget* parent)
     : QWidget(parent)
 {
     auto* layout = new QHBoxLayout(this);
     layout->setContentsMargins(0, 0, 0, 0);
+    layout->setSpacing(6);
 
-    m_backBtn = new QPushButton("<", this);
-    m_backBtn->setFixedWidth(40);
-    m_backBtn->setMinimumHeight(32);
+    const QSize iconSize(22, 22);
+
+    m_backBtn = new QPushButton(this);
+    m_backBtn->setIcon(QIcon(":/icons/arrow-left.svg"));
+    m_backBtn->setIconSize(iconSize);
+    m_backBtn->setFixedSize(42, 42);
     m_backBtn->setEnabled(false);
     m_backBtn->setToolTip("Back");
+    m_backBtn->setStyleSheet(Style::navButton());
 
-    m_forwardBtn = new QPushButton(">", this);
-    m_forwardBtn->setFixedWidth(40);
-    m_forwardBtn->setMinimumHeight(32);
+    m_forwardBtn = new QPushButton(this);
+    m_forwardBtn->setIcon(QIcon(":/icons/arrow-right.svg"));
+    m_forwardBtn->setIconSize(iconSize);
+    m_forwardBtn->setFixedSize(42, 42);
     m_forwardBtn->setEnabled(false);
     m_forwardBtn->setToolTip("Forward");
+    m_forwardBtn->setStyleSheet(Style::navButton());
 
-    auto* homeBtn = new QPushButton("Home", this);
-    homeBtn->setMinimumHeight(32);
+    auto* homeBtn = new QPushButton(this);
+    homeBtn->setIcon(QIcon(":/icons/home.svg"));
+    homeBtn->setIconSize(iconSize);
+    homeBtn->setFixedSize(42, 42);
+    homeBtn->setToolTip("Home");
+    homeBtn->setStyleSheet(Style::navButton());
+
+    auto* titleLabel = new QLabel("LEZ Explorer");
+    titleLabel->setStyleSheet(QString("color: %1; font-size: 14px; font-weight: bold; margin-left: 8px;").arg(Style::Color::accent()));
 
     layout->addWidget(m_backBtn);
     layout->addWidget(m_forwardBtn);
     layout->addWidget(homeBtn);
+    layout->addWidget(titleLabel);
     layout->addStretch();
 
     connect(m_backBtn, &QPushButton::clicked, this, &NavigationBar::backClicked);

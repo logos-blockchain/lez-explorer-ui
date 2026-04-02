@@ -19,7 +19,7 @@ pkgs.stdenv.mkDerivation rec {
     pkgs.libglvnd
   ]);
 
-  qtPluginPath = "${pkgs.qt6.qtbase}/lib/qt-6/plugins";
+  qtPluginPath = "${pkgs.qt6.qtbase}/lib/qt-6/plugins:${pkgs.qt6.qtsvg}/lib/qt-6/plugins";
 
   qtWrapperArgs = [
     "--prefix" "LD_LIBRARY_PATH" ":" qtLibPath

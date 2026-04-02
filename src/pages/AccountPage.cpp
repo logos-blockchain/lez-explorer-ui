@@ -8,6 +8,7 @@
 #include <QScrollArea>
 #include <QFrame>
 #include <QGridLayout>
+#include <QIcon>
 
 namespace {
 
@@ -32,30 +33,45 @@ AccountPage::AccountPage(const Account& account, IndexerService* indexer, QWidge
     : QWidget(parent)
 {
     auto* outerLayout = new QVBoxLayout(this);
+    outerLayout->setContentsMargins(0, 0, 0, 0);
 
     auto* scrollArea = new QScrollArea(this);
     scrollArea->setWidgetResizable(true);
     scrollArea->setFrameShape(QFrame::NoFrame);
+    scrollArea->setStyleSheet("QScrollArea { background: transparent; border: none; } QWidget#scrollContent { background: transparent; }");
 
     auto* scrollContent = new QWidget();
+    scrollContent->setObjectName("scrollContent");
     auto* layout = new QVBoxLayout(scrollContent);
     layout->setAlignment(Qt::AlignTop);
+    layout->setContentsMargins(0, 0, 0, 0);
 
-    // Title
+    // Title with icon
+    auto* titleRow = new QHBoxLayout();
+    titleRow->setSpacing(10);
+    auto* titleIcon = new QLabel();
+    titleIcon->setPixmap(QIcon(":/icons/user.svg").pixmap(30, 30));
     auto* title = new QLabel("Account Details");
     QFont titleFont = title->font();
-    titleFont.setPointSize(20);
+    titleFont.setPointSize(24);
     titleFont.setBold(true);
     title->setFont(titleFont);
-    layout->addWidget(title);
+    title->setStyleSheet(QString("color: %1;").arg(Style::Color::text()));
+    titleRow->addWidget(titleIcon);
+    titleRow->addWidget(title);
+    titleRow->addStretch();
+    layout->addLayout(titleRow);
+    layout->addSpacing(8);
 
     // Account info grid
     auto* infoFrame = new QFrame();
-    infoFrame->setFrameShape(QFrame::StyledPanel);
+    infoFrame->setFrameShape(QFrame::NoFrame);
     infoFrame->setStyleSheet(Style::cardFrameWithLabels());
 
     auto* grid = new QGridLayout(infoFrame);
     grid->setColumnStretch(1, 1);
+    grid->setVerticalSpacing(10);
+    grid->setHorizontalSpacing(20);
     int row = 0;
 
     grid->addWidget(makeFieldLabel("Account ID"), row, 0);
@@ -64,7 +80,9 @@ AccountPage::AccountPage(const Account& account, IndexerService* indexer, QWidge
     grid->addWidget(idVal, row++, 1);
 
     grid->addWidget(makeFieldLabel("Balance"), row, 0);
-    grid->addWidget(makeValueLabel(account.balance), row++, 1);
+    auto* balVal = makeValueLabel(account.balance);
+    balVal->setStyleSheet(QString("color: %1; font-weight: bold;").arg(Style::Color::green()));
+    grid->addWidget(balVal, row++, 1);
 
     grid->addWidget(makeFieldLabel("Program Owner"), row, 0);
     auto* ownerVal = makeValueLabel(account.programOwner);
@@ -83,34 +101,42 @@ AccountPage::AccountPage(const Account& account, IndexerService* indexer, QWidge
     auto transactions = indexer->getTransactionsByAccount(account.accountId, 0, 10);
 
     if (!transactions.isEmpty()) {
+        auto* headerRow = new QHBoxLayout();
+        headerRow->setContentsMargins(0, 16, 0, 6);
+        headerRow->setSpacing(8);
+        auto* headerIcon = new QLabel();
+        headerIcon->setPixmap(QIcon(":/icons/file-text.svg").pixmap(24, 24));
         auto* txHeader = new QLabel("Transaction History");
         QFont headerFont = txHeader->font();
-        headerFont.setPointSize(16);
+        headerFont.setPointSize(20);
         headerFont.setBold(true);
         txHeader->setFont(headerFont);
-        txHeader->setStyleSheet("margin-top: 16px; margin-bottom: 4px;");
-        layout->addWidget(txHeader);
+        txHeader->setStyleSheet(Style::sectionHeader());
+        headerRow->addWidget(headerIcon);
+        headerRow->addWidget(txHeader);
+        headerRow->addStretch();
+        layout->addLayout(headerRow);
 
         for (const auto& tx : transactions) {
             auto* frame = new ClickableFrame();
-            frame->setFrameShape(QFrame::StyledPanel);
+            frame->setFrameShape(QFrame::NoFrame);
             frame->setStyleSheet(Style::clickableRowWithLabels("ClickableFrame"));
 
             auto* txRow = new QHBoxLayout(frame);
+            txRow->setSpacing(10);
 
-            auto* hashLabel = new QLabel(tx.hash.left(16) + "...");
+            auto* icon = new QLabel();
+            icon->setPixmap(QIcon(":/icons/file-text.svg").pixmap(20, 20));
+            txRow->addWidget(icon);
+
+            auto* hashLabel = new QLabel(tx.hash);
             QFont boldFont = hashLabel->font();
             boldFont.setBold(true);
             hashLabel->setFont(boldFont);
 
-            QString typeColor;
-            switch (tx.type) {
-            case TransactionType::Public: typeColor = "#007bff"; break;
-            case TransactionType::PrivacyPreserving: typeColor = "#6f42c1"; break;
-            case TransactionType::ProgramDeployment: typeColor = "#fd7e14"; break;
-            }
-            auto* typeLabel = new QLabel(transactionTypeToString(tx.type));
-            typeLabel->setStyleSheet(Style::badge(typeColor));
+            QString typeStr = transactionTypeToString(tx.type);
+            auto* typeLabel = new QLabel(typeStr);
+            typeLabel->setStyleSheet(Style::badge(Style::txTypeColor(typeStr)));
 
             txRow->addWidget(hashLabel);
             txRow->addWidget(typeLabel);

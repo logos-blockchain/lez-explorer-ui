@@ -8,8 +8,33 @@
 #include <QScrollArea>
 #include <QFrame>
 #include <QGridLayout>
+#include <QIcon>
+#include <QEvent>
+#include <QMouseEvent>
 
 namespace {
+
+class PrevHashClickFilter : public QObject {
+public:
+    PrevHashClickFilter(quint64 blockId, BlockPage* page, QObject* parent)
+        : QObject(parent), m_blockId(blockId), m_page(page) {}
+
+protected:
+    bool eventFilter(QObject* obj, QEvent* event) override {
+        if (event->type() == QEvent::MouseButtonRelease) {
+            auto* me = static_cast<QMouseEvent*>(event);
+            if (me->button() == Qt::LeftButton) {
+                emit m_page->blockClicked(m_blockId);
+                return true;
+            }
+        }
+        return QObject::eventFilter(obj, event);
+    }
+
+private:
+    quint64 m_blockId;
+    BlockPage* m_page;
+};
 
 QLabel* makeFieldLabel(const QString& text)
 {
@@ -32,66 +57,89 @@ BlockPage::BlockPage(const Block& block, QWidget* parent)
     : QWidget(parent)
 {
     auto* outerLayout = new QVBoxLayout(this);
+    outerLayout->setContentsMargins(0, 0, 0, 0);
 
     auto* scrollArea = new QScrollArea(this);
     scrollArea->setWidgetResizable(true);
     scrollArea->setFrameShape(QFrame::NoFrame);
+    scrollArea->setStyleSheet("QScrollArea { background: transparent; border: none; } QWidget#scrollContent { background: transparent; }");
 
     auto* scrollContent = new QWidget();
+    scrollContent->setObjectName("scrollContent");
     auto* layout = new QVBoxLayout(scrollContent);
     layout->setAlignment(Qt::AlignTop);
+    layout->setContentsMargins(0, 0, 0, 0);
 
-    // Title
+    // Title with icon
+    auto* titleRow = new QHBoxLayout();
+    titleRow->setSpacing(10);
+    auto* titleIcon = new QLabel();
+    titleIcon->setPixmap(QIcon(":/icons/box.svg").pixmap(30, 30));
     auto* title = new QLabel(QString("Block #%1").arg(block.blockId));
     QFont titleFont = title->font();
-    titleFont.setPointSize(20);
+    titleFont.setPointSize(24);
     titleFont.setBold(true);
     title->setFont(titleFont);
-    layout->addWidget(title);
+    title->setStyleSheet(QString("color: %1;").arg(Style::Color::text()));
+    titleRow->addWidget(titleIcon);
+    titleRow->addWidget(title);
+    titleRow->addStretch();
+    layout->addLayout(titleRow);
+    layout->addSpacing(8);
 
     // Block info grid
     auto* infoFrame = new QFrame();
-    infoFrame->setFrameShape(QFrame::StyledPanel);
+    infoFrame->setFrameShape(QFrame::NoFrame);
     infoFrame->setStyleSheet(Style::cardFrameWithLabels());
 
     auto* grid = new QGridLayout(infoFrame);
     grid->setColumnStretch(1, 1);
+    grid->setVerticalSpacing(10);
+    grid->setHorizontalSpacing(20);
     int row = 0;
 
     grid->addWidget(makeFieldLabel("Block ID"), row, 0);
     grid->addWidget(makeValueLabel(QString::number(block.blockId)), row++, 1);
 
     grid->addWidget(makeFieldLabel("Hash"), row, 0);
-    grid->addWidget(makeValueLabel(block.hash), row++, 1);
+    auto* hashVal = makeValueLabel(block.hash);
+    hashVal->setStyleSheet(Style::monoText());
+    grid->addWidget(hashVal, row++, 1);
 
     grid->addWidget(makeFieldLabel("Previous Hash"), row, 0);
-    auto* prevHashLabel = new QLabel(QString("<a href='#' style='color: #007bff;'>%1</a>").arg(block.prevBlockHash));
-    prevHashLabel->setTextInteractionFlags(Qt::TextBrowserInteraction);
     if (block.blockId > 1) {
+        auto* prevHashLabel = new QLabel(block.prevBlockHash);
+        prevHashLabel->setStyleSheet(QString("color: %1; text-decoration: underline;").arg(Style::Color::accent()));
+        prevHashLabel->setCursor(Qt::PointingHandCursor);
+        prevHashLabel->setWordWrap(true);
+        prevHashLabel->setTextInteractionFlags(Qt::TextSelectableByMouse);
         quint64 prevBlockId = block.blockId - 1;
-        connect(prevHashLabel, &QLabel::linkActivated, this, [this, prevBlockId]() {
-            emit blockClicked(prevBlockId);
-        });
+        prevHashLabel->installEventFilter(new PrevHashClickFilter(prevBlockId, this, this));
+        grid->addWidget(prevHashLabel, row++, 1);
+    } else {
+        grid->addWidget(makeValueLabel(block.prevBlockHash), row++, 1);
     }
-    grid->addWidget(prevHashLabel, row++, 1);
 
     grid->addWidget(makeFieldLabel("Timestamp"), row, 0);
     grid->addWidget(makeValueLabel(block.timestamp.toString("yyyy-MM-dd hh:mm:ss UTC")), row++, 1);
 
     grid->addWidget(makeFieldLabel("Status"), row, 0);
-    QString statusColor;
-    switch (block.bedrockStatus) {
-    case BedrockStatus::Finalized: statusColor = "#28a745"; break;
-    case BedrockStatus::Safe: statusColor = "#ffc107"; break;
-    case BedrockStatus::Pending: statusColor = "#6c757d"; break;
-    }
-    auto* statusLabel = new QLabel(bedrockStatusToString(block.bedrockStatus));
-    statusLabel->setStyleSheet(Style::badge(statusColor) + " max-width: 100px;");
+    QString statusStr = bedrockStatusToString(block.bedrockStatus);
+    auto* statusLabel = new QLabel(statusStr);
+    statusLabel->setStyleSheet(Style::badge(Style::statusColor(statusStr)));
+    statusLabel->setMaximumWidth(120);
     grid->addWidget(statusLabel, row++, 1);
 
     grid->addWidget(makeFieldLabel("Signature"), row, 0);
-    auto* sigLabel = makeValueLabel(block.signature);
+    // Insert zero-width spaces every 32 chars so QLabel can word-wrap the long hex string
+    QString wrappableSig = block.signature;
+    for (int i = 32; i < wrappableSig.size(); i += 33) {
+        wrappableSig.insert(i, QChar(0x200B));
+    }
+    auto* sigLabel = new QLabel(wrappableSig);
     sigLabel->setStyleSheet(Style::monoText());
+    sigLabel->setTextInteractionFlags(Qt::TextSelectableByMouse);
+    sigLabel->setWordWrap(true);
     grid->addWidget(sigLabel, row++, 1);
 
     grid->addWidget(makeFieldLabel("Transactions"), row, 0);
@@ -101,34 +149,42 @@ BlockPage::BlockPage(const Block& block, QWidget* parent)
 
     // Transactions section
     if (!block.transactions.isEmpty()) {
+        auto* headerRow = new QHBoxLayout();
+        headerRow->setContentsMargins(0, 16, 0, 6);
+        headerRow->setSpacing(8);
+        auto* headerIcon = new QLabel();
+        headerIcon->setPixmap(QIcon(":/icons/file-text.svg").pixmap(24, 24));
         auto* txHeader = new QLabel("Transactions");
         QFont headerFont = txHeader->font();
-        headerFont.setPointSize(16);
+        headerFont.setPointSize(20);
         headerFont.setBold(true);
         txHeader->setFont(headerFont);
-        txHeader->setStyleSheet("margin-top: 16px; margin-bottom: 4px;");
-        layout->addWidget(txHeader);
+        txHeader->setStyleSheet(Style::sectionHeader());
+        headerRow->addWidget(headerIcon);
+        headerRow->addWidget(txHeader);
+        headerRow->addStretch();
+        layout->addLayout(headerRow);
 
         for (const auto& tx : block.transactions) {
             auto* frame = new ClickableFrame();
-            frame->setFrameShape(QFrame::StyledPanel);
+            frame->setFrameShape(QFrame::NoFrame);
             frame->setStyleSheet(Style::clickableRowWithLabels("ClickableFrame"));
 
             auto* txRow = new QHBoxLayout(frame);
+            txRow->setSpacing(10);
 
-            auto* hashLabel = new QLabel(tx.hash.left(16) + "...");
+            auto* icon = new QLabel();
+            icon->setPixmap(QIcon(":/icons/file-text.svg").pixmap(20, 20));
+            txRow->addWidget(icon);
+
+            auto* hashLabel = new QLabel(tx.hash);
             QFont boldFont = hashLabel->font();
             boldFont.setBold(true);
             hashLabel->setFont(boldFont);
 
-            QString typeColor;
-            switch (tx.type) {
-            case TransactionType::Public: typeColor = "#007bff"; break;
-            case TransactionType::PrivacyPreserving: typeColor = "#6f42c1"; break;
-            case TransactionType::ProgramDeployment: typeColor = "#fd7e14"; break;
-            }
-            auto* typeLabel = new QLabel(transactionTypeToString(tx.type));
-            typeLabel->setStyleSheet(Style::badge(typeColor));
+            QString typeStr = transactionTypeToString(tx.type);
+            auto* typeLabel = new QLabel(typeStr);
+            typeLabel->setStyleSheet(Style::badge(Style::txTypeColor(typeStr)));
 
             auto* metaLabel = new QLabel();
             switch (tx.type) {

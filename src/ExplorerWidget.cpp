@@ -1,4 +1,5 @@
 #include "ExplorerWidget.h"
+#include "Style.h"
 #include "services/MockIndexerService.h"
 #include "widgets/NavigationBar.h"
 #include "widgets/SearchBar.h"
@@ -15,9 +16,11 @@ ExplorerWidget::ExplorerWidget(QWidget* parent)
     : QWidget(parent)
     , m_indexer(std::make_unique<MockIndexerService>())
 {
+    setStyleSheet(Style::appBackground());
+
     auto* layout = new QVBoxLayout(this);
-    layout->setContentsMargins(8, 8, 8, 8);
-    layout->setSpacing(4);
+    layout->setContentsMargins(16, 12, 16, 12);
+    layout->setSpacing(8);
 
     // Navigation bar
     m_navBar = new NavigationBar(this);

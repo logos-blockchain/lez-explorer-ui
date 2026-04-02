@@ -7,16 +7,22 @@
 #include <QLabel>
 #include <QScrollArea>
 #include <QFrame>
+#include <QPixmap>
+#include <QPushButton>
 
 MainPage::MainPage(IndexerService* indexer, QWidget* parent)
     : QWidget(parent)
     , m_indexer(indexer)
 {
     auto* outerLayout = new QVBoxLayout(this);
+    outerLayout->setContentsMargins(0, 0, 0, 0);
 
     // Health indicator
     auto* healthRow = new QHBoxLayout();
+    auto* healthIcon = new QLabel(this);
+    healthIcon->setPixmap(QIcon(":/icons/activity.svg").pixmap(20, 20));
     m_healthLabel = new QLabel(this);
+    healthRow->addWidget(healthIcon);
     healthRow->addWidget(m_healthLabel);
     healthRow->addStretch();
     outerLayout->addLayout(healthRow);
@@ -25,10 +31,13 @@ MainPage::MainPage(IndexerService* indexer, QWidget* parent)
     auto* scrollArea = new QScrollArea(this);
     scrollArea->setWidgetResizable(true);
     scrollArea->setFrameShape(QFrame::NoFrame);
+    scrollArea->setStyleSheet("QScrollArea { background: transparent; border: none; } QWidget#scrollContent { background: transparent; }");
 
     auto* scrollContent = new QWidget();
+    scrollContent->setObjectName("scrollContent");
     m_contentLayout = new QVBoxLayout(scrollContent);
     m_contentLayout->setAlignment(Qt::AlignTop);
+    m_contentLayout->setContentsMargins(0, 0, 0, 0);
 
     scrollArea->setWidget(scrollContent);
     outerLayout->addWidget(scrollArea);
@@ -36,52 +45,77 @@ MainPage::MainPage(IndexerService* indexer, QWidget* parent)
     refresh();
 }
 
-QWidget* MainPage::createSectionHeader(const QString& title)
+QWidget* MainPage::createSectionHeader(const QString& title, const QString& iconPath)
 {
+    auto* container = new QWidget();
+    auto* layout = new QHBoxLayout(container);
+    layout->setContentsMargins(0, 12, 0, 6);
+    layout->setSpacing(8);
+    layout->setAlignment(Qt::AlignVCenter);
+
+    if (!iconPath.isEmpty()) {
+        auto* icon = new QLabel();
+        icon->setPixmap(QIcon(iconPath).pixmap(24, 24));
+        icon->setFixedSize(24, 24);
+        layout->addWidget(icon);
+    }
+
     auto* label = new QLabel(title);
     QFont font = label->font();
-    font.setPointSize(16);
+    font.setPointSize(20);
     font.setBold(true);
     label->setFont(font);
-    label->setStyleSheet("margin-top: 12px; margin-bottom: 4px;");
-    return label;
+    label->setStyleSheet(Style::sectionHeader());
+    layout->addWidget(label);
+    layout->addStretch();
+
+    return container;
 }
 
 void MainPage::addBlockRow(QVBoxLayout* layout, const Block& block)
 {
     auto* frame = new ClickableFrame();
-    frame->setFrameShape(QFrame::StyledPanel);
+    frame->setFrameShape(QFrame::NoFrame);
     frame->setStyleSheet(Style::clickableRowWithLabels("ClickableFrame"));
 
     auto* row = new QHBoxLayout(frame);
+    row->setSpacing(10);
+
+    auto* icon = new QLabel();
+    icon->setPixmap(QIcon(":/icons/box.svg").pixmap(20, 20));
+    row->addWidget(icon);
 
     auto* idLabel = new QLabel(QString("Block #%1").arg(block.blockId));
     QFont boldFont = idLabel->font();
     boldFont.setBold(true);
     idLabel->setFont(boldFont);
 
-    QString statusColor;
-    switch (block.bedrockStatus) {
-    case BedrockStatus::Finalized: statusColor = "#28a745"; break;
-    case BedrockStatus::Safe: statusColor = "#ffc107"; break;
-    case BedrockStatus::Pending: statusColor = "#6c757d"; break;
-    }
-    auto* statusLabel = new QLabel(bedrockStatusToString(block.bedrockStatus));
-    statusLabel->setStyleSheet(Style::badge(statusColor));
+    QString statusStr = bedrockStatusToString(block.bedrockStatus);
+    auto* statusLabel = new QLabel(statusStr);
+    statusLabel->setStyleSheet(Style::badge(Style::statusColor(statusStr)));
 
-    auto* hashLabel = new QLabel(block.hash.left(16) + "...");
-    hashLabel->setStyleSheet(Style::mutedText());
+    auto* hashLabel = new QLabel(block.hash);
+    hashLabel->setStyleSheet(Style::mutedText() + " font-family: 'Menlo', 'Courier New'; font-size: 11px;");
+    hashLabel->setFixedWidth(470);
 
-    auto* txCount = new QLabel(QString("%1 tx").arg(block.transactions.size()));
+    auto* txIcon = new QLabel();
+    txIcon->setPixmap(QIcon(":/icons/file-text.svg").pixmap(18, 18));
+
+    auto* txCount = new QLabel(QString::number(block.transactions.size()));
 
     auto* timeLabel = new QLabel(block.timestamp.toString("yyyy-MM-dd hh:mm:ss UTC"));
     timeLabel->setStyleSheet(Style::mutedText());
 
+    statusLabel->setFixedWidth(90);
+    statusLabel->setAlignment(Qt::AlignCenter);
+
     row->addWidget(idLabel);
-    row->addWidget(statusLabel);
-    row->addWidget(hashLabel, 1);
+    row->addWidget(hashLabel);
+    row->addStretch(1);
+    row->addWidget(txIcon);
     row->addWidget(txCount);
     row->addWidget(timeLabel);
+    row->addWidget(statusLabel);
 
     quint64 blockId = block.blockId;
     connect(frame, &ClickableFrame::clicked, this, [this, blockId]() {
@@ -94,24 +128,24 @@ void MainPage::addBlockRow(QVBoxLayout* layout, const Block& block)
 void MainPage::addTransactionRow(QVBoxLayout* layout, const Transaction& tx)
 {
     auto* frame = new ClickableFrame();
-    frame->setFrameShape(QFrame::StyledPanel);
+    frame->setFrameShape(QFrame::NoFrame);
     frame->setStyleSheet(Style::clickableRowWithLabels("ClickableFrame"));
 
     auto* row = new QHBoxLayout(frame);
+    row->setSpacing(10);
 
-    auto* hashLabel = new QLabel(tx.hash.left(16) + "...");
+    auto* icon = new QLabel();
+    icon->setPixmap(QIcon(":/icons/file-text.svg").pixmap(20, 20));
+    row->addWidget(icon);
+
+    auto* hashLabel = new QLabel(tx.hash);
     QFont boldFont = hashLabel->font();
     boldFont.setBold(true);
     hashLabel->setFont(boldFont);
 
-    QString typeColor;
-    switch (tx.type) {
-    case TransactionType::Public: typeColor = "#007bff"; break;
-    case TransactionType::PrivacyPreserving: typeColor = "#6f42c1"; break;
-    case TransactionType::ProgramDeployment: typeColor = "#fd7e14"; break;
-    }
-    auto* typeLabel = new QLabel(transactionTypeToString(tx.type));
-    typeLabel->setStyleSheet(Style::badge(typeColor));
+    QString typeStr = transactionTypeToString(tx.type);
+    auto* typeLabel = new QLabel(typeStr);
+    typeLabel->setStyleSheet(Style::badge(Style::txTypeColor(typeStr)));
 
     auto* metaLabel = new QLabel();
     switch (tx.type) {
@@ -142,12 +176,17 @@ void MainPage::addTransactionRow(QVBoxLayout* layout, const Transaction& tx)
 void MainPage::addAccountRow(QVBoxLayout* layout, const Account& account)
 {
     auto* frame = new ClickableFrame();
-    frame->setFrameShape(QFrame::StyledPanel);
+    frame->setFrameShape(QFrame::NoFrame);
     frame->setStyleSheet(Style::clickableRowWithLabels("ClickableFrame"));
 
     auto* row = new QHBoxLayout(frame);
+    row->setSpacing(10);
 
-    auto* idLabel = new QLabel(account.accountId.left(16) + "...");
+    auto* icon = new QLabel();
+    icon->setPixmap(QIcon(":/icons/user.svg").pixmap(20, 20));
+    row->addWidget(icon);
+
+    auto* idLabel = new QLabel(account.accountId);
     QFont boldFont = idLabel->font();
     boldFont.setBold(true);
     idLabel->setFont(boldFont);
@@ -174,25 +213,58 @@ void MainPage::refresh()
 
     quint64 latestId = m_indexer->getLatestBlockId();
     m_healthLabel->setText(QString("Chain height: %1").arg(latestId));
-    m_healthLabel->setStyleSheet("color: #28a745; font-weight: bold; font-size: 14px;");
+    m_healthLabel->setStyleSheet(Style::healthLabel());
 
     if (m_recentBlocksWidget) {
         m_contentLayout->removeWidget(m_recentBlocksWidget);
         delete m_recentBlocksWidget;
+        m_recentBlocksWidget = nullptr;
+        m_blocksLayout = nullptr;
+        m_loadMoreBtn = nullptr;
     }
 
-    m_recentBlocksWidget = new QWidget();
-    auto* blocksLayout = new QVBoxLayout(m_recentBlocksWidget);
-    blocksLayout->setContentsMargins(0, 0, 0, 0);
+    m_oldestLoadedBlockId = std::nullopt;
 
-    blocksLayout->addWidget(createSectionHeader("Recent Blocks"));
+    m_recentBlocksWidget = new QWidget();
+    auto* outerLayout = new QVBoxLayout(m_recentBlocksWidget);
+    outerLayout->setContentsMargins(0, 0, 0, 0);
+    outerLayout->addWidget(createSectionHeader("Recent Blocks", ":/icons/box.svg"));
+
+    // Dedicated layout for block rows — button is appended after this in outerLayout
+    auto* blockRowsWidget = new QWidget();
+    m_blocksLayout = new QVBoxLayout(blockRowsWidget);
+    m_blocksLayout->setContentsMargins(0, 0, 0, 0);
+    outerLayout->addWidget(blockRowsWidget);
 
     auto blocks = m_indexer->getBlocks(std::nullopt, 10);
     for (const auto& block : blocks) {
-        addBlockRow(blocksLayout, block);
+        addBlockRow(m_blocksLayout, block);
+        if (!m_oldestLoadedBlockId || block.blockId < *m_oldestLoadedBlockId)
+            m_oldestLoadedBlockId = block.blockId;
     }
 
+    m_loadMoreBtn = new QPushButton("Load more");
+    m_loadMoreBtn->setStyleSheet(Style::searchButton());
+    m_loadMoreBtn->setVisible(m_oldestLoadedBlockId && *m_oldestLoadedBlockId > 1);
+    connect(m_loadMoreBtn, &QPushButton::clicked, this, &MainPage::loadMoreBlocks);
+    outerLayout->addWidget(m_loadMoreBtn, 0, Qt::AlignHCenter);
+
     m_contentLayout->addWidget(m_recentBlocksWidget);
+}
+
+void MainPage::loadMoreBlocks()
+{
+    if (!m_oldestLoadedBlockId || *m_oldestLoadedBlockId <= 1)
+        return;
+
+    auto blocks = m_indexer->getBlocks(m_oldestLoadedBlockId, 10);
+    for (const auto& block : blocks) {
+        addBlockRow(m_blocksLayout, block);
+        if (block.blockId < *m_oldestLoadedBlockId)
+            m_oldestLoadedBlockId = block.blockId;
+    }
+
+    m_loadMoreBtn->setVisible(*m_oldestLoadedBlockId > 1 && !blocks.isEmpty());
 }
 
 void MainPage::showSearchResults(const SearchResults& results)
@@ -210,7 +282,7 @@ void MainPage::showSearchResults(const SearchResults& results)
     bool hasResults = false;
 
     if (!results.blocks.isEmpty()) {
-        layout->addWidget(createSectionHeader("Blocks"));
+        layout->addWidget(createSectionHeader("Blocks", ":/icons/box.svg"));
         for (const auto& block : results.blocks) {
             addBlockRow(layout, block);
         }
@@ -218,7 +290,7 @@ void MainPage::showSearchResults(const SearchResults& results)
     }
 
     if (!results.transactions.isEmpty()) {
-        layout->addWidget(createSectionHeader("Transactions"));
+        layout->addWidget(createSectionHeader("Transactions", ":/icons/file-text.svg"));
         for (const auto& tx : results.transactions) {
             addTransactionRow(layout, tx);
         }
@@ -226,7 +298,7 @@ void MainPage::showSearchResults(const SearchResults& results)
     }
 
     if (!results.accounts.isEmpty()) {
-        layout->addWidget(createSectionHeader("Accounts"));
+        layout->addWidget(createSectionHeader("Accounts", ":/icons/user.svg"));
         for (const auto& acc : results.accounts) {
             addAccountRow(layout, acc);
         }

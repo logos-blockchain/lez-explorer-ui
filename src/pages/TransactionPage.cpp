@@ -8,6 +8,7 @@
 #include <QScrollArea>
 #include <QFrame>
 #include <QGridLayout>
+#include <QIcon>
 
 namespace {
 
@@ -32,30 +33,45 @@ TransactionPage::TransactionPage(const Transaction& tx, QWidget* parent)
     : QWidget(parent)
 {
     auto* outerLayout = new QVBoxLayout(this);
+    outerLayout->setContentsMargins(0, 0, 0, 0);
 
     auto* scrollArea = new QScrollArea(this);
     scrollArea->setWidgetResizable(true);
     scrollArea->setFrameShape(QFrame::NoFrame);
+    scrollArea->setStyleSheet("QScrollArea { background: transparent; border: none; } QWidget#scrollContent { background: transparent; }");
 
     auto* scrollContent = new QWidget();
+    scrollContent->setObjectName("scrollContent");
     auto* layout = new QVBoxLayout(scrollContent);
     layout->setAlignment(Qt::AlignTop);
+    layout->setContentsMargins(0, 0, 0, 0);
 
-    // Title
+    // Title with icon
+    auto* titleRow = new QHBoxLayout();
+    titleRow->setSpacing(10);
+    auto* titleIcon = new QLabel();
+    titleIcon->setPixmap(QIcon(":/icons/file-text.svg").pixmap(30, 30));
     auto* title = new QLabel("Transaction Details");
     QFont titleFont = title->font();
-    titleFont.setPointSize(20);
+    titleFont.setPointSize(24);
     titleFont.setBold(true);
     title->setFont(titleFont);
-    layout->addWidget(title);
+    title->setStyleSheet(QString("color: %1;").arg(Style::Color::text()));
+    titleRow->addWidget(titleIcon);
+    titleRow->addWidget(title);
+    titleRow->addStretch();
+    layout->addLayout(titleRow);
+    layout->addSpacing(8);
 
     // Transaction info grid
     auto* infoFrame = new QFrame();
-    infoFrame->setFrameShape(QFrame::StyledPanel);
+    infoFrame->setFrameShape(QFrame::NoFrame);
     infoFrame->setStyleSheet(Style::cardFrameWithLabels());
 
     auto* grid = new QGridLayout(infoFrame);
     grid->setColumnStretch(1, 1);
+    grid->setVerticalSpacing(10);
+    grid->setHorizontalSpacing(20);
     int row = 0;
 
     grid->addWidget(makeFieldLabel("Hash"), row, 0);
@@ -64,21 +80,17 @@ TransactionPage::TransactionPage(const Transaction& tx, QWidget* parent)
     grid->addWidget(hashVal, row++, 1);
 
     grid->addWidget(makeFieldLabel("Type"), row, 0);
-    QString typeColor;
-    switch (tx.type) {
-    case TransactionType::Public: typeColor = "#007bff"; break;
-    case TransactionType::PrivacyPreserving: typeColor = "#6f42c1"; break;
-    case TransactionType::ProgramDeployment: typeColor = "#fd7e14"; break;
-    }
-    auto* typeLabel = new QLabel(transactionTypeToString(tx.type));
-    typeLabel->setStyleSheet(Style::badge(typeColor) + " max-width: 160px;");
+    QString typeStr = transactionTypeToString(tx.type);
+    auto* typeLabel = new QLabel(typeStr);
+    typeLabel->setStyleSheet(Style::badge(Style::txTypeColor(typeStr)));
+    typeLabel->setMaximumWidth(180);
     grid->addWidget(typeLabel, row++, 1);
 
     // Type-specific fields
     switch (tx.type) {
     case TransactionType::Public:
         grid->addWidget(makeFieldLabel("Program ID"), row, 0);
-        grid->addWidget(makeValueLabel(tx.programId), row++, 1);
+        { auto* v = makeValueLabel(tx.programId); v->setStyleSheet(Style::monoText()); grid->addWidget(v, row++, 1); }
 
         grid->addWidget(makeFieldLabel("Instruction Data"), row, 0);
         grid->addWidget(makeValueLabel(QString("%1 items").arg(tx.instructionData.size())), row++, 1);
@@ -120,22 +132,35 @@ TransactionPage::TransactionPage(const Transaction& tx, QWidget* parent)
 
     // Accounts section
     if (!tx.accounts.isEmpty()) {
+        auto* headerRow = new QHBoxLayout();
+        headerRow->setContentsMargins(0, 16, 0, 6);
+        headerRow->setSpacing(8);
+        auto* headerIcon = new QLabel();
+        headerIcon->setPixmap(QIcon(":/icons/user.svg").pixmap(24, 24));
         auto* accHeader = new QLabel("Accounts");
         QFont headerFont = accHeader->font();
-        headerFont.setPointSize(16);
+        headerFont.setPointSize(20);
         headerFont.setBold(true);
         accHeader->setFont(headerFont);
-        accHeader->setStyleSheet("margin-top: 16px; margin-bottom: 4px;");
-        layout->addWidget(accHeader);
+        accHeader->setStyleSheet(Style::sectionHeader());
+        headerRow->addWidget(headerIcon);
+        headerRow->addWidget(accHeader);
+        headerRow->addStretch();
+        layout->addLayout(headerRow);
 
         for (const auto& accRef : tx.accounts) {
             auto* frame = new ClickableFrame();
-            frame->setFrameShape(QFrame::StyledPanel);
+            frame->setFrameShape(QFrame::NoFrame);
             frame->setStyleSheet(Style::clickableRowWithLabels("ClickableFrame"));
 
             auto* accRow = new QHBoxLayout(frame);
+            accRow->setSpacing(10);
 
-            auto* idLabel = new QLabel(accRef.accountId.left(20) + "...");
+            auto* icon = new QLabel();
+            icon->setPixmap(QIcon(":/icons/user.svg").pixmap(20, 20));
+            accRow->addWidget(icon);
+
+            auto* idLabel = new QLabel(accRef.accountId);
             QFont boldFont = idLabel->font();
             boldFont.setBold(true);
             idLabel->setFont(boldFont);
