@@ -9,6 +9,9 @@
 #include <QFrame>
 #include <QPixmap>
 #include <QPushButton>
+#include <QLineEdit>
+
+#include <algorithm>
 
 MainPage::MainPage(IndexerService* indexer, QWidget* parent)
     : QWidget(parent)
@@ -16,6 +19,31 @@ MainPage::MainPage(IndexerService* indexer, QWidget* parent)
 {
     auto* outerLayout = new QVBoxLayout(this);
     outerLayout->setContentsMargins(0, 0, 0, 0);
+
+    // Indexer endpoint selector
+    auto* endpointRow = new QHBoxLayout();
+    endpointRow->setSpacing(8);
+
+    auto* endpointLabel = new QLabel("Indexer RPC", this);
+    endpointLabel->setStyleSheet(Style::mutedText() + " font-weight: bold;");
+
+    m_indexerEndpointInput = new QLineEdit(this);
+    m_indexerEndpointInput->setText(m_indexer->endpoint());
+    m_indexerEndpointInput->setPlaceholderText(IndexerService::defaultEndpoint());
+    m_indexerEndpointInput->setMinimumHeight(34);
+    m_indexerEndpointInput->setStyleSheet(Style::searchInput());
+
+    auto* applyEndpointBtn = new QPushButton("Apply", this);
+    applyEndpointBtn->setMinimumHeight(34);
+    applyEndpointBtn->setStyleSheet(Style::searchButton());
+
+    endpointRow->addWidget(endpointLabel);
+    endpointRow->addWidget(m_indexerEndpointInput, 1);
+    endpointRow->addWidget(applyEndpointBtn);
+    outerLayout->addLayout(endpointRow);
+
+    connect(applyEndpointBtn, &QPushButton::clicked, this, &MainPage::applyIndexerEndpoint);
+    connect(m_indexerEndpointInput, &QLineEdit::returnPressed, this, &MainPage::applyIndexerEndpoint);
 
     // Health indicator
     auto* healthRow = new QHBoxLayout();
@@ -72,11 +100,12 @@ QWidget* MainPage::createSectionHeader(const QString& title, const QString& icon
     return container;
 }
 
-void MainPage::addBlockRow(QVBoxLayout* layout, const Block& block)
+void MainPage::addBlockRow(QVBoxLayout* layout, const Block& block, int insertIndex)
 {
     auto* frame = new ClickableFrame();
     frame->setFrameShape(QFrame::NoFrame);
     frame->setStyleSheet(Style::clickableRowWithLabels("ClickableFrame"));
+    frame->setProperty("blockId", QVariant::fromValue<qulonglong>(block.blockId));
 
     auto* row = new QHBoxLayout(frame);
     row->setSpacing(10);
@@ -122,7 +151,63 @@ void MainPage::addBlockRow(QVBoxLayout* layout, const Block& block)
         emit blockClicked(blockId);
     });
 
-    layout->addWidget(frame);
+    if (insertIndex >= 0) {
+        layout->insertWidget(insertIndex, frame);
+    } else {
+        layout->addWidget(frame);
+    }
+}
+
+void MainPage::insertRecentBlock(const Block& block)
+{
+    if (!m_blocksLayout || m_displayedBlockIds.contains(block.blockId)) {
+        return;
+    }
+
+    int insertIndex = m_blocksLayout->count();
+    for (int i = 0; i < m_blocksLayout->count(); ++i) {
+        QLayoutItem* item = m_blocksLayout->itemAt(i);
+        if (!item || !item->widget()) {
+            continue;
+        }
+
+        bool ok = false;
+        const quint64 existingId = item->widget()->property("blockId").toULongLong(&ok);
+        if (ok && block.blockId > existingId) {
+            insertIndex = i;
+            break;
+        }
+    }
+
+    addBlockRow(m_blocksLayout, block, insertIndex);
+    m_displayedBlockIds.insert(block.blockId);
+
+    if (!m_newestLoadedBlockId || block.blockId > *m_newestLoadedBlockId) {
+        m_newestLoadedBlockId = block.blockId;
+    }
+
+    if (!m_oldestLoadedBlockId || block.blockId < *m_oldestLoadedBlockId) {
+        m_oldestLoadedBlockId = block.blockId;
+    }
+}
+
+QVector<Block> MainPage::fetchRecentBlocks(int limit)
+{
+    if (limit <= 0) {
+        return {};
+    }
+
+    auto blocks = m_indexer->getBlocks(std::nullopt, limit);
+
+    std::sort(blocks.begin(), blocks.end(), [](const Block& lhs, const Block& rhs) {
+        return lhs.blockId > rhs.blockId;
+    });
+
+    if (blocks.size() > limit) {
+        blocks.resize(limit);
+    }
+
+    return blocks;
 }
 
 void MainPage::addTransactionRow(QVBoxLayout* layout, const Transaction& tx)
@@ -211,8 +296,9 @@ void MainPage::refresh()
 {
     clearSearchResults();
 
-    quint64 latestId = m_indexer->getLatestBlockId();
-    m_healthLabel->setText(QString("Chain height: %1").arg(latestId));
+    quint64 latestId = m_indexer->getLastFinalizedBlockId();
+    m_latestKnownBlockId = latestId;
+    m_healthLabel->setText(QString("Chain height: %1").arg(m_latestKnownBlockId));
     m_healthLabel->setStyleSheet(Style::healthLabel());
 
     if (m_recentBlocksWidget) {
@@ -223,7 +309,9 @@ void MainPage::refresh()
         m_loadMoreBtn = nullptr;
     }
 
+    m_newestLoadedBlockId = std::nullopt;
     m_oldestLoadedBlockId = std::nullopt;
+    m_displayedBlockIds.clear();
 
     m_recentBlocksWidget = new QWidget();
     auto* outerLayout = new QVBoxLayout(m_recentBlocksWidget);
@@ -236,11 +324,10 @@ void MainPage::refresh()
     m_blocksLayout->setContentsMargins(0, 0, 0, 0);
     outerLayout->addWidget(blockRowsWidget);
 
-    auto blocks = m_indexer->getBlocks(std::nullopt, 10);
+    auto blocks = fetchRecentBlocks(10);
+
     for (const auto& block : blocks) {
-        addBlockRow(m_blocksLayout, block);
-        if (!m_oldestLoadedBlockId || block.blockId < *m_oldestLoadedBlockId)
-            m_oldestLoadedBlockId = block.blockId;
+        insertRecentBlock(block);
     }
 
     m_loadMoreBtn = new QPushButton("Load more");
@@ -258,13 +345,28 @@ void MainPage::loadMoreBlocks()
         return;
 
     auto blocks = m_indexer->getBlocks(m_oldestLoadedBlockId, 10);
+    std::sort(blocks.begin(), blocks.end(), [](const Block& lhs, const Block& rhs) {
+        return lhs.blockId > rhs.blockId;
+    });
+
     for (const auto& block : blocks) {
-        addBlockRow(m_blocksLayout, block);
-        if (block.blockId < *m_oldestLoadedBlockId)
-            m_oldestLoadedBlockId = block.blockId;
+        insertRecentBlock(block);
     }
 
-    m_loadMoreBtn->setVisible(*m_oldestLoadedBlockId > 1 && !blocks.isEmpty());
+    m_loadMoreBtn->setVisible(m_oldestLoadedBlockId && *m_oldestLoadedBlockId > 1 && !blocks.isEmpty());
+}
+
+void MainPage::applyIndexerEndpoint()
+{
+    QString endpoint = m_indexerEndpointInput->text().trimmed();
+    if (endpoint.isEmpty()) {
+        endpoint = IndexerService::defaultEndpoint();
+        m_indexerEndpointInput->setText(endpoint);
+    }
+
+    m_indexer->setEndpoint(endpoint);
+    clearSearchResults();
+    refresh();
 }
 
 void MainPage::showSearchResults(const SearchResults& results)
@@ -319,19 +421,26 @@ void MainPage::onNewBlock(const Block& block)
 {
     if (!m_blocksLayout) return;
 
-    m_healthLabel->setText(QString("Chain height: %1").arg(block.blockId));
+    m_latestKnownBlockId = std::max(m_latestKnownBlockId, block.blockId);
+    m_healthLabel->setText(QString("Chain height: %1").arg(m_latestKnownBlockId));
 
-    // Append to layout then move to top (index 0)
-    int countBefore = m_blocksLayout->count();
-    addBlockRow(m_blocksLayout, block);
-    if (m_blocksLayout->count() <= countBefore) return;
+    // If notifications jump ahead, rebuild recent list from backend
+    // so we do not mix one fresh head block with stale rows.
+    if (!m_newestLoadedBlockId) {
+        refresh();
+        return;
+    }
 
-    QLayoutItem* item = m_blocksLayout->itemAt(m_blocksLayout->count() - 1);
-    if (!item || !item->widget()) return;
+    if (block.blockId > *m_newestLoadedBlockId && (block.blockId - *m_newestLoadedBlockId) > 1) {
+        refresh();
+        return;
+    }
 
-    QWidget* newRow = item->widget();
-    m_blocksLayout->removeWidget(newRow);
-    m_blocksLayout->insertWidget(0, newRow);
+    insertRecentBlock(block);
+
+    if (m_loadMoreBtn) {
+        m_loadMoreBtn->setVisible(m_oldestLoadedBlockId && *m_oldestLoadedBlockId > 1);
+    }
 }
 
 void MainPage::clearSearchResults()

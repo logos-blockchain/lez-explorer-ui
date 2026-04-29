@@ -42,6 +42,8 @@
           ];
           buildInputs = [
             pkgs.qt6.qtbase
+            pkgs.qt6.qtsvg
+            pkgs.qt6.qtwebsockets
           ];
 
           shellHook = ''

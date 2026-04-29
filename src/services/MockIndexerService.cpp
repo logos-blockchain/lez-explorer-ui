@@ -40,6 +40,19 @@ MockIndexerService::MockIndexerService(QObject* parent)
     m_blockTimer.start(30000); // 30 seconds
 }
 
+QString MockIndexerService::endpoint() const
+{
+    return m_endpoint;
+}
+
+void MockIndexerService::setEndpoint(const QString& endpoint)
+{
+    m_endpoint = endpoint.trimmed();
+    if (m_endpoint.isEmpty()) {
+        m_endpoint = IndexerService::defaultEndpoint();
+    }
+}
+
 Block MockIndexerService::generateBlock(quint64 blockId, const QString& prevHash)
 {
     auto* rng = QRandomGenerator::global();
@@ -303,7 +316,7 @@ QVector<Block> MockIndexerService::getBlocks(std::optional<quint64> before, int 
     return result;
 }
 
-quint64 MockIndexerService::getLatestBlockId()
+quint64 MockIndexerService::getLastFinalizedBlockId()
 {
     if (m_blocks.isEmpty()) return 0;
     return m_blocks.last().blockId;

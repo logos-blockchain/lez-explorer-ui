@@ -1,6 +1,6 @@
 #include "ExplorerWidget.h"
 #include "Style.h"
-#include "services/MockIndexerService.h"
+#include "services/RpcIndexerService.h"
 #include "widgets/NavigationBar.h"
 #include "widgets/SearchBar.h"
 #include "pages/MainPage.h"
@@ -14,7 +14,7 @@
 
 ExplorerWidget::ExplorerWidget(QWidget* parent)
     : QWidget(parent)
-    , m_indexer(std::make_unique<MockIndexerService>())
+    , m_indexer(std::make_unique<RpcIndexerService>())
 {
     setStyleSheet(Style::appBackground());
 

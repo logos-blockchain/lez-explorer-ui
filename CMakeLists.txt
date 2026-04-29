@@ -8,7 +8,7 @@ set(CMAKE_AUTORCC ON)
 set(CMAKE_AUTOUIC ON)
 
 # Find Qt packages
-find_package(Qt6 REQUIRED COMPONENTS Core Widgets Svg SvgWidgets)
+find_package(Qt6 REQUIRED COMPONENTS Core Widgets Svg SvgWidgets Network WebSockets)
 
 # Try to find the component-interfaces package first
 find_package(component-interfaces QUIET)
@@ -29,6 +29,8 @@ set(SOURCES
     src/Style.h
     src/services/MockIndexerService.cpp
     src/services/MockIndexerService.h
+    src/services/RpcIndexerService.cpp
+    src/services/RpcIndexerService.h
     src/services/IndexerService.h
     src/models/Block.h
     src/models/Transaction.h
@@ -71,6 +73,8 @@ target_link_libraries(lez_explorer_ui PRIVATE
     Qt6::Widgets
     Qt6::Svg
     Qt6::SvgWidgets
+    Qt6::Network
+    Qt6::WebSockets
     component-interfaces
 )
 

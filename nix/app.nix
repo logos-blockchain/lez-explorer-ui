@@ -15,6 +15,7 @@ pkgs.stdenv.mkDerivation rec {
 
   qtLibPath = pkgs.lib.makeLibraryPath ([
     pkgs.qt6.qtbase
+    pkgs.qt6.qtwebsockets
   ] ++ pkgs.lib.optionals pkgs.stdenv.isLinux [
     pkgs.libglvnd
   ]);
