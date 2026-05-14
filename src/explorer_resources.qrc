@@ -1,0 +1,12 @@
+<RCC>
+  <qresource prefix="/">
+    <file>icons/arrow-left.svg</file>
+    <file>icons/arrow-right.svg</file>
+    <file>icons/home.svg</file>
+    <file>icons/search.svg</file>
+    <file>icons/box.svg</file>
+    <file>icons/file-text.svg</file>
+    <file>icons/user.svg</file>
+    <file>icons/activity.svg</file>
+  </qresource>
+</RCC>

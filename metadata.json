@@ -1,0 +1,10 @@
+{
+  "name": "lez_explorer_ui",
+  "version": "1.0.0",
+  "description": "LEZ Explorer UI - A block explorer for the Logos Execution Zone",
+  "type": "ui",
+  "main": "lez_explorer_ui",
+  "dependencies": [],
+  "category": "explorer",
+  "capabilities": ["ui_components"]
+}
