@@ -2,7 +2,13 @@
   description = "LEZ Explorer UI - A Qt block explorer for the Logos Execution Zone";
 
   inputs = {
-    nixpkgs.url = "github:NixOS/nixpkgs/nixos-24.11";
+    # Pinned to the EXACT nixpkgs revision basecamp resolves via logos-nix, so this
+    # in-process `type: ui` module links the identical qtbase (6.9.2) and does not
+    # load a second QtCore into basecamp's process (which aborts with "Must construct
+    # a QApplication before a QWidget"). Matching the version string is not enough —
+    # the store path must match, so this must be re-pinned whenever basecamp bumps its
+    # logos-nix/nixpkgs lock.
+    nixpkgs.url = "github:NixOS/nixpkgs/e9f00bd893984bc8ce46c895c3bf7cac95331127";
   };
 
   outputs = { self, nixpkgs }:
