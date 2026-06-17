@@ -1,4 +1,5 @@
 result
 build
 
-lez-explorer-ui-lib-lgx-1.0.0
+# ignore lgx builds
+lez-explorer-ui-*-lgx-*
