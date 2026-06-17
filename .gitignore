@@ -1,2 +1,5 @@
 result
 build
+
+# ignore lgx builds
+lez-explorer-ui-*-lgx-*
