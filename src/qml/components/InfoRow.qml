@@ -12,6 +12,7 @@ RowLayout {
     property string label: ""
     property string value: ""
     property bool mono: false
+    property bool copyable: false
     property color valueColor: Theme.palette.text
 
     spacing: Theme.spacing.medium
@@ -34,6 +35,12 @@ RowLayout {
         text: root.value
         color: root.valueColor
         Layout.fillWidth: true
+        Layout.alignment: Qt.AlignTop
+    }
+
+    CopyButton {
+        visible: root.copyable && root.value.length > 0
+        value: root.value
         Layout.alignment: Qt.AlignTop
     }
 }

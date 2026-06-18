@@ -20,7 +20,23 @@ Rectangle {
     property int histIndex: -1
 
     // --- Navigation API (pages call these via the injected `explorer`) ---
+    function sameDescriptor(a, b) {
+        if (!a || !b)
+            return false;
+        if (a.type !== b.type)
+            return false;
+        if (a.type === "home")
+            return true;
+        if (a.type === "search")
+            return a.query === b.query;
+        return a.param === b.param;
+    }
     function navigateTo(desc) {
+        // Navigating to the page we're already on is a no-op — don't grow the
+        // history (so e.g. Home-while-home doesn't wake the Back button).
+        var current = root.histIndex >= 0 ? root.history[root.histIndex] : null;
+        if (root.sameDescriptor(current, desc))
+            return;
         var h = root.history.slice(0, root.histIndex + 1);
         h.push(desc);
         root.history = h;

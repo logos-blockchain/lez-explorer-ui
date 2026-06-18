@@ -49,7 +49,7 @@ Item {
                 visible: page.loaded && Object.keys(page.block).length > 0
 
                 InfoRow { label: "Block ID"; value: String(page.block.blockId !== undefined ? page.block.blockId : "") }
-                InfoRow { label: "Hash"; value: page.block.hash || ""; mono: true }
+                InfoRow { label: "Hash"; value: page.block.hash || ""; mono: true; copyable: true }
 
                 // Previous hash — a clickable link to the previous block when not genesis.
                 RowLayout {
@@ -68,6 +68,11 @@ Item {
                             onTapped: page.explorer.navigateBlock(Number(page.blockId) - 1)
                         }
                     }
+                    CopyButton {
+                        visible: (page.block.prevBlockHash || "").length > 0
+                        value: page.block.prevBlockHash || ""
+                        Layout.alignment: Qt.AlignTop
+                    }
                 }
 
                 InfoRow { label: "Timestamp"; value: page.block.timestampText || "" }
@@ -80,7 +85,7 @@ Item {
                     Item { Layout.fillWidth: true }
                 }
 
-                InfoRow { label: "Signature"; value: page.block.signature || ""; mono: true }
+                InfoRow { label: "Signature"; value: page.block.signature || ""; mono: true; copyable: true }
                 InfoRow { label: "Transactions"; value: String(page.block.txCount !== undefined ? page.block.txCount : 0) }
             }
 

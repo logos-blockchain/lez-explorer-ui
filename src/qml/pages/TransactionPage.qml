@@ -48,7 +48,7 @@ Item {
                 Layout.fillWidth: true
                 visible: page.loaded && Object.keys(page.tx).length > 0
 
-                InfoRow { label: "Hash"; value: page.tx.hash || ""; mono: true }
+                InfoRow { label: "Hash"; value: page.tx.hash || ""; mono: true; copyable: true }
                 RowLayout {
                     Layout.fillWidth: true
                     spacing: Theme.spacing.medium
@@ -60,7 +60,7 @@ Item {
                 // Public.
                 InfoRow {
                     visible: page.txType === "Public"
-                    label: "Program ID"; value: page.tx.programId || ""; mono: true
+                    label: "Program ID"; value: page.tx.programId || ""; mono: true; copyable: true
                 }
                 InfoRow {
                     visible: page.txType === "Public"

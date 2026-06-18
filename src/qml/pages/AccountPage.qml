@@ -49,13 +49,13 @@ Item {
                 Layout.fillWidth: true
                 visible: page.loaded && Object.keys(page.account).length > 1
 
-                InfoRow { label: "Account ID"; value: page.account.accountId || ""; mono: true }
+                InfoRow { label: "Account ID"; value: page.account.accountId || ""; mono: true; copyable: true }
                 InfoRow {
                     label: "Balance"
                     value: page.account.balance || "0"
                     valueColor: Theme.palette.success
                 }
-                InfoRow { label: "Program Owner"; value: page.account.programOwner || ""; mono: true }
+                InfoRow { label: "Program Owner"; value: page.account.programOwner || ""; mono: true; copyable: true }
                 InfoRow { label: "Nonce"; value: page.account.nonce || "0" }
                 InfoRow {
                     label: "Data Size"
