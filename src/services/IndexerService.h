@@ -21,9 +21,12 @@ public:
     explicit IndexerService(QObject* parent = nullptr) : QObject(parent) {}
     ~IndexerService() override = default;
 
+    // Over the Logos protocol the "endpoint" is repurposed to the indexer
+    // config path (absolute path to indexer_config.json); blank means the
+    // indexer is already running. No network URL is involved anymore.
     static QString defaultEndpoint()
     {
-        return "ws://localhost:8779";
+        return QString();
     }
 
     virtual QString endpoint() const = 0;

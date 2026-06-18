@@ -30,5 +30,4 @@ struct Block {
     QString signature;
     QVector<Transaction> transactions;
     BedrockStatus bedrockStatus = BedrockStatus::Pending;
-    QString bedrockParentId;
 };

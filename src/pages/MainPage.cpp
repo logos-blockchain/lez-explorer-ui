@@ -24,12 +24,12 @@ MainPage::MainPage(IndexerService* indexer, QWidget* parent)
     auto* endpointRow = new QHBoxLayout();
     endpointRow->setSpacing(8);
 
-    auto* endpointLabel = new QLabel("Indexer RPC", this);
+    auto* endpointLabel = new QLabel("Indexer config", this);
     endpointLabel->setStyleSheet(Style::mutedText() + " font-weight: bold;");
 
     m_indexerEndpointInput = new QLineEdit(this);
     m_indexerEndpointInput->setText(m_indexer->endpoint());
-    m_indexerEndpointInput->setPlaceholderText(IndexerService::defaultEndpoint());
+    m_indexerEndpointInput->setPlaceholderText("absolute path to indexer_config.json (blank = already running)");
     m_indexerEndpointInput->setMinimumHeight(34);
     m_indexerEndpointInput->setStyleSheet(Style::searchInput());
 
@@ -358,13 +358,10 @@ void MainPage::loadMoreBlocks()
 
 void MainPage::applyIndexerEndpoint()
 {
-    QString endpoint = m_indexerEndpointInput->text().trimmed();
-    if (endpoint.isEmpty()) {
-        endpoint = IndexerService::defaultEndpoint();
-        m_indexerEndpointInput->setText(endpoint);
-    }
-
-    m_indexer->setEndpoint(endpoint);
+    // The "endpoint" is the indexer config path now; blank is valid and means
+    // "the indexer is already running" (start is idempotent provider-side).
+    const QString configPath = m_indexerEndpointInput->text().trimmed();
+    m_indexer->setEndpoint(configPath);
     clearSearchResults();
     refresh();
 }

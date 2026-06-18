@@ -63,7 +63,6 @@ Block MockIndexerService::generateBlock(quint64 blockId, const QString& prevHash
     block.hash = randomHash();
     block.timestamp = QDateTime::currentDateTimeUtc();
     block.signature = randomHexString(64);
-    block.bedrockParentId = randomHexString(32);
     block.bedrockStatus = BedrockStatus::Pending;
 
     int txCount = rng->bounded(1, 6);
@@ -218,7 +217,6 @@ void MockIndexerService::generateData()
         block.hash = randomHash();
         block.timestamp = timestamp;
         block.signature = randomHexString(64);
-        block.bedrockParentId = randomHexString(32);
 
         // Older blocks are finalized, middle ones safe, recent ones pending
         if (id <= 15) {

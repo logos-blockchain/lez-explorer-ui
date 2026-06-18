@@ -11,6 +11,7 @@ class QStackedWidget;
 class NavigationBar;
 class SearchBar;
 class MainPage;
+class LogosAPI;
 
 struct NavHome {};
 struct NavBlock { quint64 blockId; };
@@ -23,7 +24,7 @@ class ExplorerWidget : public QWidget {
     Q_OBJECT
 
 public:
-    explicit ExplorerWidget(QWidget* parent = nullptr);
+    explicit ExplorerWidget(LogosAPI* logosAPI = nullptr, QWidget* parent = nullptr);
     ~ExplorerWidget() override;
 
 private:

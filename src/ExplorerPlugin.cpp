@@ -6,9 +6,9 @@ ExplorerPlugin::ExplorerPlugin(QObject* parent)
 {
 }
 
-QWidget* ExplorerPlugin::createWidget(LogosAPI* /*logosAPI*/)
+QWidget* ExplorerPlugin::createWidget(LogosAPI* logosAPI)
 {
-    return new ExplorerWidget();
+    return new ExplorerWidget(logosAPI);
 }
 
 void ExplorerPlugin::destroyWidget(QWidget* widget)

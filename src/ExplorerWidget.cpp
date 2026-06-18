@@ -1,6 +1,6 @@
 #include "ExplorerWidget.h"
 #include "Style.h"
-#include "services/RpcIndexerService.h"
+#include "services/LpIndexerService.h"
 #include "widgets/NavigationBar.h"
 #include "widgets/SearchBar.h"
 #include "pages/MainPage.h"
@@ -12,9 +12,9 @@
 #include <QStackedWidget>
 #include <QLabel>
 
-ExplorerWidget::ExplorerWidget(QWidget* parent)
+ExplorerWidget::ExplorerWidget(LogosAPI* logosAPI, QWidget* parent)
     : QWidget(parent)
-    , m_indexer(std::make_unique<RpcIndexerService>())
+    , m_indexer(std::make_unique<LpIndexerService>(logosAPI))
 {
     setStyleSheet(Style::appBackground());
 
