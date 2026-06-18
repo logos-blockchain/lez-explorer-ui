@@ -17,7 +17,6 @@ Item {
         if (page.backend) {
             var current = page.backend.configText;
             editor.text = (current && current.length > 0) ? current : page.backend.defaultConfig;
-            portField.text = "8779";
         }
     }
 
@@ -44,40 +43,6 @@ Item {
                   + "It is reloaded automatically the next time you open the explorer."
             color: Theme.palette.textSecondary
             font.pixelSize: Theme.typography.secondaryText
-        }
-
-        RowLayout {
-            Layout.fillWidth: true
-            spacing: Theme.spacing.medium
-
-            LogosText {
-                text: "RPC port"
-                color: Theme.palette.textSecondary
-                font.pixelSize: Theme.typography.secondaryText
-                Layout.alignment: Qt.AlignVCenter
-            }
-            Rectangle {
-                Layout.preferredWidth: 120
-                Layout.preferredHeight: 36
-                radius: Theme.spacing.radiusMedium
-                color: Theme.palette.backgroundSecondary
-                border.width: 1
-                border.color: portField.activeFocus ? Theme.palette.borderInteractive
-                                                     : Theme.palette.borderSecondary
-                TextField {
-                    id: portField
-                    anchors.fill: parent
-                    anchors.leftMargin: Theme.spacing.medium
-                    anchors.rightMargin: Theme.spacing.medium
-                    verticalAlignment: TextInput.AlignVCenter
-                    text: "8779"
-                    inputMethodHints: Qt.ImhDigitsOnly
-                    color: Theme.palette.text
-                    font.pixelSize: Theme.typography.secondaryText
-                    background: Item {}
-                }
-            }
-            Item { Layout.fillWidth: true }
         }
 
         // JSON editor. The TextArea is anchored to fill its container directly
@@ -175,7 +140,9 @@ Item {
             return;
         }
         page.setStatus("Saving…", false);
-        logos.watch(page.backend.applyConfigJson(editor.text, portField.text),
+        // Port is an internal detail of the indexer's own RPC listener; the
+        // explorer reads over the Logos protocol, so we pass "" (keep default).
+        logos.watch(page.backend.applyConfigJson(editor.text, ""),
             function (ok) {
                 if (ok) {
                     page.setStatus("Saved. Indexer starting…", false);
