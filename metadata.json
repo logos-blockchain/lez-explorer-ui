@@ -1,22 +1,26 @@
 {
   "name": "lez_explorer_ui",
   "version": "1.0.0",
-  "type": "ui",
+  "type": "ui_qml",
+  "interface": "universal",
   "category": "explorer",
   "description": "LEZ Explorer UI - A block explorer for the Logos Execution Zone",
   "main": "lez_explorer_ui_plugin",
+  "icon": "src/qml/icons/box.svg",
+  "view": "qml/Main.qml",
   "dependencies": ["lez_indexer_module"],
+  "codegen": { "rep": "src/lez_explorer_ui.rep" },
   "nix": {
     "packages": {
-      "build": ["qt6.qtsvg"],
-      "runtime": ["qt6.qtsvg"]
+      "build": [],
+      "runtime": ["qt6.qtdeclarative", "zstd", "krb5", "abseil-cpp"]
     },
     "external_libraries": [],
     "cmake": {
-      "find_packages": ["Qt6Widgets", "Qt6Svg", "Qt6SvgWidgets", "Qt6Network"],
+      "find_packages": [],
       "extra_sources": [],
-      "extra_include_dirs": ["interfaces"],
-      "extra_link_libraries": ["Qt6::Widgets", "Qt6::Svg", "Qt6::SvgWidgets", "Qt6::Network"]
+      "extra_include_dirs": [],
+      "extra_link_libraries": []
     }
   }
 }

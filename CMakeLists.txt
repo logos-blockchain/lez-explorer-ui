@@ -3,10 +3,6 @@ project(LezExplorerUiPlugin LANGUAGES CXX)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
-# Hand-written Q_OBJECT classes (widgets/pages/services) need MOC;
-# explorer_resources.qrc -> compiled icons via AUTORCC.
-set(CMAKE_AUTOMOC ON)
-set(CMAKE_AUTORCC ON)
 
 # Logos Module CMake helper. For nix builds this is provided via
 # LOGOS_MODULE_BUILDER_ROOT.
@@ -18,51 +14,18 @@ else()
     message(FATAL_ERROR "LogosModule.cmake not found. Set LOGOS_MODULE_BUILDER_ROOT.")
 endif()
 
-# Legacy `type: ui` QWidget plugin (hand-written ExplorerPlugin / IComponent —
-# no `interface: universal`, so no codegen). The builder links the logos
-# SDK/protocol (logos_api.h / getClient) automatically; we add the Qt widget
-# stack the explorer needs on top of the default Core/RemoteObjects.
+# Universal ui_qml module: we author only the .rep view contract + the *Backend
+# class. REP_FILE runs repc; the generated *Plugin / *Interface glue in
+# generated_code/ (Q_PLUGIN_METADATA, initLogos wiring, QtRO registration) is
+# compiled automatically. The QML view (src/qml/) is delivered by the host
+# alongside the plugin — no Qt Widgets, no .qrc. The logos SDK/protocol (incl.
+# the typed lez_indexer_module wrappers) is linked by the builder.
 logos_module(
     NAME lez_explorer_ui
+    REP_FILE src/lez_explorer_ui.rep
     SOURCES
-        src/ExplorerPlugin.cpp
-        src/ExplorerPlugin.h
-        src/ExplorerWidget.cpp
-        src/ExplorerWidget.h
-        src/Style.h
-        src/services/IndexerService.h
-        src/services/LpIndexerService.cpp
-        src/services/LpIndexerService.h
-        src/services/MockIndexerService.cpp
-        src/services/MockIndexerService.h
-        src/models/Block.h
-        src/models/Transaction.h
-        src/models/Account.h
-        src/widgets/SearchBar.cpp
-        src/widgets/SearchBar.h
-        src/widgets/NavigationBar.cpp
-        src/widgets/NavigationBar.h
-        src/widgets/ClickableFrame.h
-        src/pages/MainPage.cpp
-        src/pages/MainPage.h
-        src/pages/BlockPage.cpp
-        src/pages/BlockPage.h
-        src/pages/TransactionPage.cpp
-        src/pages/TransactionPage.h
-        src/pages/AccountPage.cpp
-        src/pages/AccountPage.h
-        src/explorer_resources.qrc
-    FIND_PACKAGES
-        Qt6Widgets
-        Qt6Svg
-        Qt6SvgWidgets
-        Qt6Network
-    LINK_LIBRARIES
-        Qt6::Widgets
-        Qt6::Svg
-        Qt6::SvgWidgets
-        Qt6::Network
+        src/lez_explorer_ui_backend.h
+        src/lez_explorer_ui_backend.cpp
     INCLUDE_DIRS
         src
-        interfaces
 )
