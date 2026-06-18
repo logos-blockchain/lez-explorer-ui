@@ -11,69 +11,15 @@ Item {
     // Injected by Main: the controller (navigation + backend access).
     property var explorer
     readonly property var backend: explorer ? explorer.backend : null
+    readonly property bool connected: backend && backend.connectionStatus === "Connected"
 
     ColumnLayout {
         anchors.fill: parent
         spacing: Theme.spacing.medium
 
-        // Indexer config + health.
+        // Health bar.
         Card {
             Layout.fillWidth: true
-
-            RowLayout {
-                Layout.fillWidth: true
-                spacing: Theme.spacing.medium
-
-                LogosText {
-                    text: "Indexer config"
-                    color: Theme.palette.textSecondary
-                    font.pixelSize: Theme.typography.secondaryText
-                    Layout.alignment: Qt.AlignVCenter
-                }
-
-                Rectangle {
-                    Layout.fillWidth: true
-                    Layout.preferredHeight: 38
-                    radius: Theme.spacing.radiusMedium
-                    color: Theme.palette.backgroundSecondary
-                    border.width: 1
-                    border.color: configField.activeFocus ? Theme.palette.borderInteractive
-                                                           : Theme.palette.borderSecondary
-
-                    TextField {
-                        id: configField
-                        anchors.fill: parent
-                        anchors.leftMargin: Theme.spacing.medium
-                        anchors.rightMargin: Theme.spacing.medium
-                        verticalAlignment: TextInput.AlignVCenter
-                        text: page.backend ? page.backend.indexerConfig : ""
-                        placeholderText: "absolute path to indexer_config.json (blank = already running)"
-                        color: Theme.palette.text
-                        placeholderTextColor: Theme.palette.textMuted
-                        font.pixelSize: Theme.typography.secondaryText
-                        background: Item {}
-                        onAccepted: page.applyConfig()
-                    }
-                }
-
-                Rectangle {
-                    Layout.preferredHeight: 38
-                    Layout.preferredWidth: 84
-                    radius: Theme.spacing.radiusMedium
-                    color: applyHover.hovered ? Qt.lighter(Theme.palette.primary, 1.1) : Theme.palette.primary
-
-                    HoverHandler { id: applyHover }
-                    TapHandler { onTapped: page.applyConfig() }
-
-                    LogosText {
-                        anchors.centerIn: parent
-                        text: "Apply"
-                        color: Theme.palette.background
-                        font.pixelSize: Theme.typography.secondaryText
-                        font.weight: Theme.typography.weightBold
-                    }
-                }
-            }
 
             RowLayout {
                 Layout.fillWidth: true
@@ -84,9 +30,7 @@ Item {
                     height: 9
                     radius: 4.5
                     Layout.alignment: Qt.AlignVCenter
-                    color: page.backend && page.backend.connectionStatus === "Connected"
-                           ? Theme.palette.success
-                           : Theme.palette.warning
+                    color: page.connected ? Theme.palette.success : Theme.palette.warning
                 }
                 LogosText {
                     text: {
@@ -97,6 +41,28 @@ Item {
                     }
                     color: Theme.palette.textMuted
                     font.pixelSize: Theme.typography.secondaryText
+                    Layout.alignment: Qt.AlignVCenter
+                }
+
+                Item { Layout.fillWidth: true }
+
+                Rectangle {
+                    Layout.preferredHeight: 34
+                    Layout.preferredWidth: 100
+                    radius: Theme.spacing.radiusMedium
+                    color: settingsHover.hovered ? Theme.palette.backgroundSecondary : Theme.palette.backgroundElevated
+                    border.width: 1
+                    border.color: Theme.palette.borderSecondary
+
+                    HoverHandler { id: settingsHover }
+                    TapHandler { onTapped: if (page.explorer) page.explorer.navigateSettings() }
+
+                    LogosText {
+                        anchors.centerIn: parent
+                        text: "Settings"
+                        color: Theme.palette.textSecondary
+                        font.pixelSize: Theme.typography.secondaryText
+                    }
                 }
             }
         }
@@ -147,26 +113,43 @@ Item {
             }
 
             // Empty state.
-            LogosText {
+            ColumnLayout {
                 anchors.centerIn: parent
                 visible: blockList.count === 0
                 width: parent.width * 0.8
-                horizontalAlignment: Text.AlignHCenter
-                wrapMode: Text.WordWrap
-                text: page.backend && page.backend.connectionStatus === "Connected"
-                      ? "No blocks indexed yet."
-                      : "Waiting for the indexer… set the config path above if it isn't running."
-                color: Theme.palette.textMuted
-                font.pixelSize: Theme.typography.secondaryText
+                spacing: Theme.spacing.medium
+
+                LogosText {
+                    Layout.fillWidth: true
+                    horizontalAlignment: Text.AlignHCenter
+                    wrapMode: Text.WordWrap
+                    text: page.connected
+                          ? "No blocks indexed yet."
+                          : "No indexer running yet. Open Settings to configure and start it."
+                    color: Theme.palette.textMuted
+                    font.pixelSize: Theme.typography.secondaryText
+                }
+
+                Rectangle {
+                    visible: !page.connected
+                    Layout.alignment: Qt.AlignHCenter
+                    implicitHeight: 38
+                    implicitWidth: 160
+                    radius: Theme.spacing.radiusMedium
+                    color: openHover.hovered ? Qt.lighter(Theme.palette.primary, 1.1) : Theme.palette.primary
+
+                    HoverHandler { id: openHover }
+                    TapHandler { onTapped: if (page.explorer) page.explorer.navigateSettings() }
+
+                    LogosText {
+                        anchors.centerIn: parent
+                        text: "Open Settings"
+                        color: Theme.palette.background
+                        font.pixelSize: Theme.typography.secondaryText
+                        font.weight: Theme.typography.weightBold
+                    }
+                }
             }
         }
-    }
-
-    function applyConfig() {
-        if (!page.backend)
-            return;
-        // Empty port → backend keeps its default (8779).
-        logos.watch(page.backend.applyIndexerConfig(configField.text, ""),
-            function (ok) {}, function (err) {});
     }
 }

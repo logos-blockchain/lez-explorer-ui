@@ -12,6 +12,7 @@ A QML block explorer for the **Logos Execution Zone** (LEZ), packaged as a `logo
 - Search by block id, block hash, transaction hash, or account id
 - Browser-style back/forward navigation
 - "Load more" pagination for older blocks
+- Copy buttons on hashes / ids; in-app **Settings** JSON editor to configure & (re)start the indexer (no file paths; persists across launches)
 - Styled with the shared `Logos.Theme` / `Logos.Controls` design system
 
 ## Architecture
@@ -34,7 +35,7 @@ nix run .           # preview in logos-standalone-app (spawns the ui-host)
 nix build .#lgx     # bundle as a .lgx for logos-basecamp
 ```
 
-Running against live data needs the indexer reachable; enter its `indexer_config.json` path in the explorer's config field (leave blank if the indexer is already running). Load the explorer and indexer `.lgx` bundles together in logos-basecamp for the full experience.
+Running against live data: open **Settings** (gear icon, top-right), edit the indexer config JSON (pre-filled with a working template) and press **Save & Start** — the explorer persists the config and (re)starts the indexer from it, so no file paths are involved, and it auto-restarts from the saved config on the next launch. Load the explorer and indexer `.lgx` bundles together in logos-basecamp for the full experience.
 
 ## Testing
 

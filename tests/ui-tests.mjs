@@ -20,7 +20,7 @@ test("lez_explorer_ui: loads the view", async (app) => {
 
 test("lez_explorer_ui: renders the home page", async (app) => {
   await app.waitFor(
-    async () => { await app.expectTexts(["Recent Blocks", "Indexer config"]); },
+    async () => { await app.expectTexts(["Recent Blocks", "Settings"]); },
     { timeout: 15000, interval: 500, description: "the home page to render" }
   );
 });

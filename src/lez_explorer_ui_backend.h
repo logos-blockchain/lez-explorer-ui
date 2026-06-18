@@ -23,6 +23,11 @@ class QTimer;
  * that JSON into QVariantMap / QVariantList (schema preserved from the former
  * `LpIndexerService`) for the QML view, and runs a 2 s poll on the chain tip to
  * keep `recentBlocks` / `chainHeight` live (the indexer emits no events).
+ *
+ * Config is edited in-app (Settings page) as JSON, not as a path: the indexer's
+ * `start_indexer` takes a file path, so this class persists the edited JSON to a
+ * writable file and starts the indexer from there. The last-saved config is
+ * reloaded and auto-started on the next launch.
  */
 class LezExplorerUiBackend : public LezExplorerUiSimpleSource, public LogosUiPluginContext {
 public:
@@ -30,11 +35,11 @@ public:
     ~LezExplorerUiBackend() override;
 
     // Fires when ui-host wires the plugin's LogosAPI: modules() is live, so we
-    // start the poll here.
+    // load any saved config, start it, and start the poll here.
     void onContextReady() override;
 
     // .rep SLOTs.
-    bool applyIndexerConfig(QString configPath, QString port) override;
+    bool applyConfigJson(QString json, QString port) override;
     void refreshBlocks() override;
     void loadMoreBlocks() override;
     QVariantMap getBlockById(QString id) override;
@@ -52,7 +57,16 @@ private:
     // Parse a getBlocks(...) JSON array payload into a list of block maps.
     QVariantList parseBlockArrayJson(const QString& json) const;
 
+    // Writable path where the edited config JSON is persisted, and where the
+    // indexer is started from. Computed once (lazily).
+    QString configFilePath();
+    bool writeConfigFile(const QString& json);
+    QString readConfigFile() const;
+    // start_indexer from configFilePath(); returns true on success.
+    bool startIndexerFromFile();
+
     QString m_port = QStringLiteral("8779");
+    QString m_configFilePath;
     QVariantList m_recentBlocks;
     quint64 m_newestLoadedId = 0; // highest block id currently in m_recentBlocks
     quint64 m_oldestLoadedId = 0; // lowest block id currently in m_recentBlocks

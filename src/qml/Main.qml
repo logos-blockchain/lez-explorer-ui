@@ -46,6 +46,7 @@ Rectangle {
     function navigateBlock(id) { root.navigateTo({ type: "block", param: id }); }
     function navigateTx(hash) { root.navigateTo({ type: "tx", param: hash }); }
     function navigateAccount(id) { root.navigateTo({ type: "account", param: id }); }
+    function navigateSettings() { root.navigateTo({ type: "settings" }); }
     function showSearchResults(results, query) {
         root.navigateTo({ type: "search", param: results, query: query });
     }
@@ -72,6 +73,8 @@ Rectangle {
             url = "pages/SearchResultsPage.qml";
             props.results = d.param;
             props.query = d.query || "";
+        } else if (d.type === "settings") {
+            url = "pages/SettingsPage.qml";
         }
         pageLoader.setSource(Qt.resolvedUrl(url), props);
         navBar.canGoBack = root.histIndex > 0;
@@ -101,6 +104,7 @@ Rectangle {
             onBackClicked: root.goBack()
             onForwardClicked: root.goForward()
             onHomeClicked: root.goHome()
+            onSettingsClicked: root.navigateSettings()
         }
 
         SearchBar {

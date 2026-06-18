@@ -12,6 +12,7 @@ RowLayout {
     signal backClicked()
     signal forwardClicked()
     signal homeClicked()
+    signal settingsClicked()
 
     spacing: Theme.spacing.small
 
@@ -40,4 +41,9 @@ RowLayout {
     }
 
     Item { Layout.fillWidth: true }
+
+    IconButton {
+        source: Qt.resolvedUrl("../icons/settings.svg")
+        onClicked: root.settingsClicked()
+    }
 }

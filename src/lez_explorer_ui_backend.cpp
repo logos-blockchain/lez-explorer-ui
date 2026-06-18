@@ -4,11 +4,16 @@
 #include <utility>
 
 #include <QDateTime>
+#include <QDir>
+#include <QFile>
+#include <QFileInfo>
 #include <QJsonArray>
 #include <QJsonDocument>
 #include <QJsonObject>
+#include <QJsonParseError>
 #include <QJsonValue>
 #include <QRegularExpression>
+#include <QStandardPaths>
 #include <QTimeZone>
 #include <QTimer>
 
@@ -22,6 +27,31 @@ constexpr int kPollIntervalMs = 2000;
 // Above this gap we rebuild the feed from the backend rather than fetch every
 // missing block one by one (matches the former LpIndexerService threshold).
 constexpr quint64 kGapRebuildThreshold = 8;
+
+// Starter config shown in the Settings editor (and its "Reset to default").
+// A working local-dev indexer config; the user edits the fields (bedrock addr,
+// channel id, initial accounts/commitments, signing key, ...) and saves.
+const char* const kDefaultConfig = R"JSON({
+    "home": ".",
+    "consensus_info_polling_interval": "1s",
+    "bedrock_config": {
+        "addr": "http://localhost:8080",
+        "backoff": {
+            "start_delay": "100ms",
+            "max_retries": 5
+        }
+    },
+    "channel_id": "0101010101010101010101010101010101010101010101010101010101010101",
+    "initial_accounts": [
+        { "account_id": "CbgR6tj5kWx5oziiFptM7jMvrQeYY3Mzaao6ciuhSr2r", "balance": 10000 },
+        { "account_id": "2RHZhw9h534Zr3eq2RGhQete2Hh667foECzXPmSkGni2", "balance": 20000 }
+    ],
+    "initial_commitments": [],
+    "signing_key": [
+        37, 37, 37, 37, 37, 37, 37, 37, 37, 37, 37, 37, 37, 37, 37, 37,
+        37, 37, 37, 37, 37, 37, 37, 37, 37, 37, 37, 37, 37, 37, 37, 37
+    ]
+})JSON";
 
 // 64/128-bit values arrive as decimal strings (to dodge JSON double precision
 // loss), but be lenient and also accept a JSON number.
@@ -186,13 +216,23 @@ QVariantMap txJsonToMap(const QString& json)
 
 } // namespace
 
-LezExplorerUiBackend::LezExplorerUiBackend() = default;
+LezExplorerUiBackend::LezExplorerUiBackend()
+{
+    setDefaultConfig(QString::fromUtf8(kDefaultConfig));
+}
 
 LezExplorerUiBackend::~LezExplorerUiBackend() = default;
 
 void LezExplorerUiBackend::onContextReady()
 {
     setConnectionStatus(QStringLiteral("Connecting"));
+
+    // Reload + auto-start the previously-saved config, if any (set-once UX).
+    const QString saved = readConfigFile();
+    if (!saved.isEmpty()) {
+        setConfigText(saved);
+        startIndexerFromFile();
+    }
 
     // The indexer pushes no events — poll the tip for live head updates.
     m_pollTimer = new QTimer(this);
@@ -204,29 +244,39 @@ void LezExplorerUiBackend::onContextReady()
     pollTip();
 }
 
-bool LezExplorerUiBackend::applyIndexerConfig(QString configPath, QString port)
+bool LezExplorerUiBackend::applyConfigJson(QString json, QString port)
 {
-    const QString trimmedConfig = configPath.trimmed();
     const QString trimmedPort = port.trimmed();
     if (!trimmedPort.isEmpty()) {
         m_port = trimmedPort;
     }
-    setIndexerConfig(trimmedConfig);
 
-    bool started = true;
-    if (!trimmedConfig.isEmpty()) {
-        const qlonglong code = modules().lez_indexer_module.start_indexer(trimmedConfig, m_port);
-        started = (code == 0);
-        if (!started) {
-            emit error(QStringLiteral("start_indexer failed (code %1) for %2").arg(code).arg(trimmedConfig));
-        }
+    const QString trimmed = json.trimmed();
+    if (trimmed.isEmpty()) {
+        emit error(QStringLiteral("Config is empty."));
+        return false;
     }
+    // Reject invalid JSON up front so we never start the indexer from garbage.
+    QJsonParseError parseError;
+    QJsonDocument::fromJson(trimmed.toUtf8(), &parseError);
+    if (parseError.error != QJsonParseError::NoError) {
+        emit error(QStringLiteral("Invalid JSON: %1").arg(parseError.errorString()));
+        return false;
+    }
+
+    if (!writeConfigFile(json)) {
+        emit error(QStringLiteral("Could not write config to %1").arg(configFilePath()));
+        return false;
+    }
+    setConfigText(json);
+
+    const bool ok = startIndexerFromFile();
 
     // Re-baseline the poller; a (re)started indexer may ingest afresh.
     m_lastPolledTip = 0;
     m_polledOnce = false;
     refreshBlocks();
-    return started;
+    return ok;
 }
 
 void LezExplorerUiBackend::refreshBlocks()
@@ -435,4 +485,64 @@ QVariantList LezExplorerUiBackend::parseBlockArrayJson(const QString& json) cons
         }
     }
     return blocks;
+}
+
+namespace {
+// The writable path where the edited config JSON is persisted and the indexer
+// is started from (so the UI never deals with paths). Same logic, shared by the
+// const and non-const accessors.
+QString resolveConfigFilePath()
+{
+    QString dir = QStandardPaths::writableLocation(QStandardPaths::AppDataLocation);
+    if (dir.isEmpty()) {
+        dir = QDir::tempPath();
+    }
+    return QDir(dir).filePath(QStringLiteral("indexer_config.json"));
+}
+} // namespace
+
+QString LezExplorerUiBackend::configFilePath()
+{
+    if (m_configFilePath.isEmpty()) {
+        m_configFilePath = resolveConfigFilePath();
+    }
+    return m_configFilePath;
+}
+
+bool LezExplorerUiBackend::writeConfigFile(const QString& json)
+{
+    const QString path = configFilePath();
+    const QDir dir = QFileInfo(path).dir();
+    if (!dir.exists() && !dir.mkpath(QStringLiteral("."))) {
+        return false;
+    }
+    QFile file(path);
+    if (!file.open(QIODevice::WriteOnly | QIODevice::Truncate | QIODevice::Text)) {
+        return false;
+    }
+    const QByteArray bytes = json.toUtf8();
+    const bool ok = file.write(bytes) == bytes.size();
+    file.close();
+    return ok;
+}
+
+QString LezExplorerUiBackend::readConfigFile() const
+{
+    QFile file(m_configFilePath.isEmpty() ? resolveConfigFilePath() : m_configFilePath);
+    if (!file.exists() || !file.open(QIODevice::ReadOnly | QIODevice::Text)) {
+        return {};
+    }
+    const QString content = QString::fromUtf8(file.readAll());
+    file.close();
+    return content;
+}
+
+bool LezExplorerUiBackend::startIndexerFromFile()
+{
+    const qlonglong code = modules().lez_indexer_module.start_indexer(configFilePath(), m_port);
+    if (code != 0) {
+        emit error(QStringLiteral("start_indexer failed (code %1)").arg(code));
+        return false;
+    }
+    return true;
 }
