@@ -8,8 +8,10 @@
     # the metadata.json "dependencies" entry. For local development against an
     # un-pushed branch, override with a path:
     #   lez_indexer_module.url = "path:../logos-execution-zone-indexer-module";
-    # TODO: use the correct branch & repo name afterwards
-    lez_indexer_module.url = "github:logos-blockchain/logos-execution-zone-indexer-module/erhant/migr-to-logos-module-builder";
+    # NOTE: git+https (not github:) because the branch name contains a slash —
+    # the github: fetcher mis-routes slashed refs through the commits API (404).
+    # TODO: repoint to the merge target once this branch lands.
+    lez_indexer_module.url = "git+https://github.com/logos-blockchain/logos-execution-zone-indexer-module?ref=erhant/migr-to-logos-module-builder";
   };
 
   outputs =

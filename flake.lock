@@ -21,14 +21,18 @@
         "logos-module-builder": "logos-module-builder_2"
       },
       "locked": {
-        "lastModified": 1781779306,
-        "narHash": "sha256-dPnC5t4PohfEALyvJqHjc9QlVPse0GhLue1mczt90So=",
-        "path": "/Users/erhant/logos/logos-execution-zone-indexer-module",
-        "type": "path"
+        "lastModified": 1781780348,
+        "narHash": "sha256-XBipaTgJQk4jl17RJLMhVbdEJKfSC2BdWHgTVZN9UG8=",
+        "ref": "erhant/migr-to-logos-module-builder",
+        "rev": "31e176a09be44bcaf7a0b8846df69fb38564bb88",
+        "revCount": 35,
+        "type": "git",
+        "url": "https://github.com/logos-blockchain/logos-execution-zone-indexer-module"
       },
       "original": {
-        "path": "/Users/erhant/logos/logos-execution-zone-indexer-module",
-        "type": "path"
+        "ref": "erhant/migr-to-logos-module-builder",
+        "type": "git",
+        "url": "https://github.com/logos-blockchain/logos-execution-zone-indexer-module"
       }
     },
     "logos-blockchain-circuits": {
