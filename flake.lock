@@ -27,12 +27,12 @@
         "rev": "7ba107e7f5b46ba871210f28a562863198b9b8a8",
         "revCount": 36,
         "type": "git",
-        "url": "https://github.com/logos-blockchain/logos-execution-zone-indexer-module"
+        "url": "https://github.com/logos-blockchain/lez-indexer-module"
       },
       "original": {
         "ref": "erhant/migr-to-logos-module-builder",
         "type": "git",
-        "url": "https://github.com/logos-blockchain/logos-execution-zone-indexer-module"
+        "url": "https://github.com/logos-blockchain/lez-indexer-module"
       }
     },
     "logos-blockchain-circuits": {

@@ -1,6 +1,6 @@
 # LEZ Explorer UI
 
-A QML block explorer for the **Logos Execution Zone** (LEZ), packaged as a `logos-module-builder` **`ui_qml`** module (universal authoring model). The QML view runs process-isolated in a `ui-host`, backed by a small C++ backend that reads from the [`lez_indexer_module`](https://github.com/logos-blockchain/logos-execution-zone-indexer-module) **in-process over the Logos protocol** (Qt Remote Objects) — no WebSocket, no external RPC socket.
+A QML block explorer for the **Logos Execution Zone** (LEZ), packaged as a `logos-module-builder` **`ui_qml`** module (universal authoring model). The QML view runs process-isolated in a `ui-host`, backed by a small C++ backend that reads from the [`lez_indexer_module`](https://github.com/logos-blockchain/lez-indexer-module) **in-process over the Logos protocol** (Qt Remote Objects) — no WebSocket, no external RPC socket.
 
 ## Features
 
@@ -45,12 +45,14 @@ git add -A                       # nix only sees tracked files
 nix build .#integration-test -L  # build + run the tests (logs streamed with -L)
 ```
 
-To iterate interactively against a local, un-pushed indexer branch, add the override used during development:
-
-```sh
-nix build .#integration-test -L \
-  --override-input lez_indexer_module path:../logos-execution-zone-indexer-module
-```
+> [!TIP]
+>
+> To iterate interactively against a local, un-pushed indexer branch, add the override used during development:
+>
+> ```sh
+> nix build .#integration-test -L \
+>   --override-input lez_indexer_module path:../lez-indexer-module
+> ```
 
 ## License
 
