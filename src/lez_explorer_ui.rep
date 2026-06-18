@@ -1,0 +1,43 @@
+#include <QVariantList>
+#include <QVariantMap>
+
+// QtRO view contract for the LEZ block explorer. The QML view talks to this
+// surface; the *Plugin / *Interface glue is generated (interface: universal).
+//
+// State the view binds to is exposed as auto-synced PROPs; one-shot lookups are
+// SLOTs whose return value is delivered to QML via logos.watch(...). Everything
+// is Qt-typed (the QtRO wire contract); the backend converts the indexer's
+// compact JSON into QVariantMap/QVariantList before it crosses this boundary.
+class LezExplorerUi
+{
+    // Recent-blocks feed shown on the home page (newest first). Backend-owned:
+    // the 2 s poll prepends new heads and "Load more" appends older pages.
+    PROP(QVariantList recentBlocks READONLY)
+    // Tip block id (from getLastFinalizedBlockId).
+    PROP(qlonglong chainHeight=0 READONLY)
+    // Absolute path of the indexer config currently in use ("" if none set).
+    PROP(QString indexerConfig READONLY)
+    // "Connecting" / "Connected" / "Error" — drives the health indicator.
+    PROP(QString connectionStatus READONLY)
+
+    // Point the indexer at a config and (re)start ingestion, then refresh the
+    // feed. port is the indexer RPC port. Returns true on success. A blank
+    // configPath skips start_indexer (the indexer is assumed already running).
+    SLOT(bool applyIndexerConfig(QString configPath, QString port))
+    // Reload the latest page into recentBlocks and re-baseline the poller.
+    SLOT(void refreshBlocks())
+    // Append the next older page of blocks to recentBlocks.
+    SLOT(void loadMoreBlocks())
+
+    // Detail lookups — each returns an empty map/list when not found.
+    SLOT(QVariantMap getBlockById(QString id))
+    SLOT(QVariantMap getBlockByHash(QString hash))
+    SLOT(QVariantMap getTransaction(QString hash))
+    SLOT(QVariantMap getAccount(QString accountId))
+    SLOT(QVariantList getTransactionsByAccount(QString accountId, int offset, int limit))
+    // Composed client-side: { blocks: [...], transactions: [...], accounts: [...] }.
+    SLOT(QVariantMap search(QString query))
+
+    // Surfaced to the view for transient failures (e.g. a failed start_indexer).
+    SIGNAL(error(QString message))
+}
