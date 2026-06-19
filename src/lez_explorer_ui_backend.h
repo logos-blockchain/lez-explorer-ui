@@ -39,7 +39,7 @@ public:
     void onContextReady() override;
 
     // .rep SLOTs.
-    bool applyConfigJson(QString json, QString port) override;
+    bool applyConfigJson(QString json) override;
     void refreshBlocks() override;
     void loadMoreBlocks() override;
     QVariantMap getBlockById(QString id) override;
@@ -65,7 +65,6 @@ private:
     // start_indexer from configFilePath(); returns true on success.
     bool startIndexerFromFile();
 
-    QString m_port = QStringLiteral("8779");
     QString m_configFilePath;
     QVariantList m_recentBlocks;
     quint64 m_newestLoadedId = 0; // highest block id currently in m_recentBlocks

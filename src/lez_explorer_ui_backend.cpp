@@ -244,13 +244,8 @@ void LezExplorerUiBackend::onContextReady()
     pollTip();
 }
 
-bool LezExplorerUiBackend::applyConfigJson(QString json, QString port)
+bool LezExplorerUiBackend::applyConfigJson(QString json)
 {
-    const QString trimmedPort = port.trimmed();
-    if (!trimmedPort.isEmpty()) {
-        m_port = trimmedPort;
-    }
-
     const QString trimmed = json.trimmed();
     if (trimmed.isEmpty()) {
         emit error(QStringLiteral("Config is empty."));
@@ -539,7 +534,7 @@ QString LezExplorerUiBackend::readConfigFile() const
 
 bool LezExplorerUiBackend::startIndexerFromFile()
 {
-    const qlonglong code = modules().lez_indexer_module.start_indexer(configFilePath(), m_port);
+    const qlonglong code = modules().lez_indexer_module.start_indexer(configFilePath());
     if (code != 0) {
         emit error(QStringLiteral("start_indexer failed (code %1)").arg(code));
         return false;

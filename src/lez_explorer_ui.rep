@@ -25,10 +25,9 @@ class LezExplorerUi
     PROP(QString defaultConfig READONLY)
 
     // Persist `json` as the indexer config and (re)start ingestion from it, then
-    // refresh the feed. `port` is the indexer RPC port (blank keeps the current
-    // one). The backend writes the JSON to a file itself — the UI never deals
-    // with paths. Returns true on success.
-    SLOT(bool applyConfigJson(QString json, QString port))
+    // refresh the feed. The backend writes the JSON to a file itself — the UI
+    // never deals with paths. Returns true on success.
+    SLOT(bool applyConfigJson(QString json))
     // Reload the latest page into recentBlocks and re-baseline the poller.
     SLOT(void refreshBlocks())
     // Append the next older page of blocks to recentBlocks.

@@ -5,12 +5,16 @@ import Logos.Controls
 import Logos.Theme
 
 // Search input + button. Emits searchRequested(query) on Enter or button click.
+// Bind the built-in `enabled` (e.g. to the indexer connection state) to block
+// searching when there's nothing to query; it dims and goes non-interactive.
 RowLayout {
     id: root
 
     signal searchRequested(string query)
 
     spacing: Theme.spacing.small
+    opacity: enabled ? 1.0 : 0.5
+    Behavior on opacity { NumberAnimation { duration: 120 } }
 
     Rectangle {
         Layout.fillWidth: true
@@ -40,7 +44,9 @@ RowLayout {
                 id: field
                 Layout.fillWidth: true
                 Layout.alignment: Qt.AlignVCenter
-                placeholderText: "Search by block id / block hash / tx hash / account id…"
+                placeholderText: root.enabled
+                    ? "Search by block id / block hash / tx hash / account id…"
+                    : "Connect an indexer to search…"
                 color: Theme.palette.text
                 placeholderTextColor: Theme.palette.textMuted
                 font.pixelSize: Theme.typography.secondaryText
