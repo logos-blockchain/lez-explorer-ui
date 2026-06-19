@@ -32,7 +32,6 @@ constexpr quint64 kGapRebuildThreshold = 8;
 // A working local-dev indexer config; the user edits the fields (bedrock addr,
 // channel id, initial accounts/commitments, signing key, ...) and saves.
 const char* const kDefaultConfig = R"JSON({
-    "home": ".",
     "consensus_info_polling_interval": "1s",
     "bedrock_config": {
         "addr": "http://localhost:8080",
