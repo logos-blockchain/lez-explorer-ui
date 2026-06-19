@@ -488,7 +488,7 @@ namespace {
 // const and non-const accessors.
 QString resolveConfigFilePath()
 {
-    QString dir = QStandardPaths::writableLocation(QStandardPaths::AppDataLocation);
+    QString dir = QStandardPaths::writableLocation(QStandardPaths::AppLocalDataLocation);
     if (dir.isEmpty()) {
         dir = QDir::tempPath();
     }
