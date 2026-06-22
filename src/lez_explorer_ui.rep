@@ -1,0 +1,48 @@
+#include <QVariantList>
+#include <QVariantMap>
+
+// QtRO view contract for the LEZ block explorer. The QML view talks to this
+// surface; the *Plugin / *Interface glue is generated (interface: universal).
+//
+// State the view binds to is exposed as auto-synced PROPs; one-shot lookups are
+// SLOTs whose return value is delivered to QML via logos.watch(...). Everything
+// is Qt-typed (the QtRO wire contract); the backend converts the indexer's
+// compact JSON into QVariantMap/QVariantList before it crosses this boundary.
+class LezExplorerUi
+{
+    // Recent-blocks feed shown on the home page (newest first). Backend-owned:
+    // the 2 s poll prepends new heads and "Load more" appends older pages.
+    PROP(QVariantList recentBlocks READONLY)
+    // Tip block id (from getLastFinalizedBlockId).
+    PROP(qlonglong chainHeight=0 READONLY)
+    // "Connecting" / "Connected" / "Error" — drives the health indicator.
+    PROP(QString connectionStatus READONLY)
+    // The indexer config JSON currently in effect ("" until one is saved). The
+    // Settings editor seeds from this (falling back to defaultConfig).
+    PROP(QString configText READONLY)
+    // Built-in starter config template (seeded by the backend) for the Settings
+    // editor's "Reset to default".
+    PROP(QString defaultConfig READONLY)
+
+    // Persist `json` as the indexer config and (re)start ingestion from it, then
+    // refresh the feed. `port` is the indexer RPC port (blank keeps the current
+    // one). The backend writes the JSON to a file itself — the UI never deals
+    // with paths. Returns true on success.
+    SLOT(bool applyConfigJson(QString json, QString port))
+    // Reload the latest page into recentBlocks and re-baseline the poller.
+    SLOT(void refreshBlocks())
+    // Append the next older page of blocks to recentBlocks.
+    SLOT(void loadMoreBlocks())
+
+    // Detail lookups — each returns an empty map/list when not found.
+    SLOT(QVariantMap getBlockById(QString id))
+    SLOT(QVariantMap getBlockByHash(QString hash))
+    SLOT(QVariantMap getTransaction(QString hash))
+    SLOT(QVariantMap getAccount(QString accountId))
+    SLOT(QVariantList getTransactionsByAccount(QString accountId, int offset, int limit))
+    // Composed client-side: { blocks: [...], transactions: [...], accounts: [...] }.
+    SLOT(QVariantMap search(QString query))
+
+    // Surfaced to the view for transient failures (e.g. a failed start_indexer).
+    SIGNAL(error(QString message))
+}
