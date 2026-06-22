@@ -52,6 +52,9 @@ public:
 private:
     // Tip poll: detect new heads and append/rebuild the recent-blocks feed.
     void pollTip();
+    // Parse the indexer's status JSON, publish the `syncStatus` PROP + the
+    // legacy `connectionStatus`, and return the indexed tip (0 if none yet).
+    quint64 applySyncStatus(const QString& json);
     // Fetch a single block as a normalized map ({} if missing).
     QVariantMap fetchBlock(quint64 blockId);
     // Parse a getBlocks(...) JSON array payload into a list of block maps.

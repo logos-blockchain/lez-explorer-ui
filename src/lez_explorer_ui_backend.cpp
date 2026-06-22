@@ -405,17 +405,54 @@ QVariantMap LezExplorerUiBackend::search(QString query)
     return results;
 }
 
+quint64 LezExplorerUiBackend::applySyncStatus(const QString& json)
+{
+    // Empty JSON means the indexer isn't running (not configured / not started);
+    // a real status always carries one of the core's states.
+    QString state = QStringLiteral("stopped");
+    quint64 blockId = 0;
+    QString errorMsg;
+
+    if (!json.isEmpty()) {
+        QJsonParseError parseError;
+        const QJsonDocument doc = QJsonDocument::fromJson(json.toUtf8(), &parseError);
+        if (parseError.error == QJsonParseError::NoError && doc.isObject()) {
+            const QJsonObject obj = doc.object();
+            state = obj.value(QStringLiteral("state")).toString(QStringLiteral("starting"));
+            blockId = static_cast<quint64>(obj.value(QStringLiteral("indexedBlockId")).toDouble(0));
+            errorMsg = obj.value(QStringLiteral("lastError")).toString();
+        }
+    }
+
+    QVariantMap status;
+    status.insert(QStringLiteral("state"), state);
+    status.insert(QStringLiteral("blockId"), static_cast<qulonglong>(blockId));
+    status.insert(QStringLiteral("error"), errorMsg);
+    setSyncStatus(status);
+
+    // Keep the legacy health indicator in step with the richer status.
+    if (state == QLatin1String("error")) {
+        setConnectionStatus(QStringLiteral("Error"));
+    } else if (state == QLatin1String("syncing") || state == QLatin1String("caught_up")) {
+        setConnectionStatus(QStringLiteral("Connected"));
+    } else {
+        setConnectionStatus(QStringLiteral("Connecting"));
+    }
+
+    return blockId;
+}
+
 void LezExplorerUiBackend::pollTip()
 {
-    const QString tipStr = modules().lez_indexer_module.getLastFinalizedBlockId();
-    bool ok = false;
-    const quint64 tip = tipStr.toULongLong(&ok);
-    if (!ok || tip == 0) {
-        setConnectionStatus(QStringLiteral("Connecting"));
+    // One status call drives both the sync banner and the feed: indexedBlockId
+    // is the L2 tip we page from.
+    const quint64 tip = applySyncStatus(modules().lez_indexer_module.getStatus());
+    if (tip == 0) {
+        // No finalized block yet (starting / syncing from genesis, or stopped);
+        // syncStatus already conveys which, so just wait for the next poll.
         return;
     }
 
-    setConnectionStatus(QStringLiteral("Connected"));
     setChainHeight(static_cast<qlonglong>(tip));
 
     // First successful poll: fill the feed and baseline without double-loading.

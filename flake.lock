@@ -21,11 +21,11 @@
         "logos-module-builder": "logos-module-builder_4"
       },
       "locked": {
-        "lastModified": 1781900595,
-        "narHash": "sha256-75phyeA9/wOeVo+IDIujzdlHIyK6X+KV1nMsNvDlXww=",
+        "lastModified": 1782142627,
+        "narHash": "sha256-IZslE6yROAxl/FpjlEeZRc+vHKc/1M7kIFvRlgWqDIQ=",
         "ref": "erhant/migr-to-logos-module-builder-update-LEZ",
-        "rev": "f6f9cfdb3ae3cca4f5f934c47dddfaaa230c7b1c",
-        "revCount": 40,
+        "rev": "014a6dcfe1f5b2529024e8e0fa659e0c546f8652",
+        "revCount": 42,
         "type": "git",
         "url": "https://github.com/logos-blockchain/lez-indexer-module"
       },
@@ -2013,11 +2013,11 @@
         "rust-rapidsnark": "rust-rapidsnark"
       },
       "locked": {
-        "lastModified": 1781900321,
-        "narHash": "sha256-zwEhLNqhAL9otUk8cJIygw22YZrAeV0q7RDnne3kmHI=",
+        "lastModified": 1782142589,
+        "narHash": "sha256-K5NtBontpPx1XqnX6jbEzPXSchaLbPlG9689W+C/ExA=",
         "ref": "erhant/fix-indexer-ffi",
-        "rev": "49d540e64d74bd4517a0f9c42f16f0c9140f7299",
-        "revCount": 2771,
+        "rev": "2a78b1b3d1b4080930c00ecf23b5c0e73cd646b8",
+        "revCount": 2773,
         "type": "git",
         "url": "https://github.com/logos-blockchain/logos-execution-zone"
       },

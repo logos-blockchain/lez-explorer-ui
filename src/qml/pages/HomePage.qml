@@ -11,13 +11,47 @@ Item {
     // Injected by Main: the controller (navigation + backend access).
     property var explorer
     readonly property var backend: explorer ? explorer.backend : null
-    readonly property bool connected: backend && backend.connectionStatus === "Connected"
+
+    // Ingestion status (from backend.syncStatus) drives the health/sync banner.
+    readonly property var sync: backend ? backend.syncStatus : null
+    readonly property string syncState: (sync && sync.state) ? sync.state : "starting"
+    readonly property string syncError: (sync && sync.error) ? sync.error : ""
+
+    // Human-readable line for the banner: the current phase (or the error), so
+    // the user can tell catching-up from a real failure on first launch.
+    function statusLine() {
+        if (!backend)
+            return "";
+        var height = backend.chainHeight > 0 ? backend.chainHeight : "—";
+        if (page.syncState === "error")
+            return page.syncError !== "" ? page.syncError : "Indexer error";
+        if (page.syncState === "caught_up")
+            return "Up to date · block " + height;
+        if (page.syncState === "syncing")
+            return "Syncing… · block " + height;
+        if (page.syncState === "stopped")
+            return "Indexer not running";
+        return "Starting indexer…";
+    }
+
+    // Message for the empty block list, tailored to the current phase. Settings
+    // lives only in the top-right gear, so we point there rather than add a button.
+    function emptyStateText() {
+        if (page.syncState === "error")
+            return (page.syncError !== "" ? "Indexer error: " + page.syncError : "Indexer error.")
+                 + "\nOpen Settings to reconfigure and restart.";
+        if (page.syncState === "syncing" || page.syncState === "starting")
+            return "Indexer is syncing, please wait…";
+        if (page.syncState === "caught_up")
+            return "No blocks indexed yet.";
+        return "No indexer running.\nOpen Settings to configure and start it.";
+    }
 
     ColumnLayout {
         anchors.fill: parent
         spacing: Theme.spacing.medium
 
-        // Health bar.
+        // Health / sync bar.
         Card {
             Layout.fillWidth: true
 
@@ -30,39 +64,17 @@ Item {
                     height: 9
                     radius: 4.5
                     Layout.alignment: Qt.AlignVCenter
-                    color: page.connected ? Theme.palette.success : Theme.palette.warning
+                    color: page.syncState === "error" ? Theme.palette.error
+                         : page.syncState === "caught_up" ? Theme.palette.success
+                         : Theme.palette.warning
                 }
                 LogosText {
-                    text: {
-                        if (!page.backend)
-                            return "";
-                        var height = page.backend.chainHeight > 0 ? page.backend.chainHeight : "—";
-                        return "Chain height: " + height + "   ·   " + page.backend.connectionStatus;
-                    }
-                    color: Theme.palette.textMuted
+                    text: page.statusLine()
+                    color: page.syncState === "error" ? Theme.palette.error : Theme.palette.textMuted
                     font.pixelSize: Theme.typography.secondaryText
                     Layout.alignment: Qt.AlignVCenter
-                }
-
-                Item { Layout.fillWidth: true }
-
-                Rectangle {
-                    Layout.preferredHeight: 34
-                    Layout.preferredWidth: 100
-                    radius: Theme.spacing.radiusMedium
-                    color: settingsHover.hovered ? Theme.palette.backgroundSecondary : Theme.palette.backgroundElevated
-                    border.width: 1
-                    border.color: Theme.palette.borderSecondary
-
-                    HoverHandler { id: settingsHover }
-                    TapHandler { onTapped: if (page.explorer) page.explorer.navigateSettings() }
-
-                    LogosText {
-                        anchors.centerIn: parent
-                        text: "Settings"
-                        color: Theme.palette.textSecondary
-                        font.pixelSize: Theme.typography.secondaryText
-                    }
+                    Layout.fillWidth: true
+                    elide: Text.ElideRight
                 }
             }
         }
@@ -112,43 +124,16 @@ Item {
                 }
             }
 
-            // Empty state.
-            ColumnLayout {
+            // Empty state — phase-aware message; Settings lives in the top-right gear.
+            LogosText {
                 anchors.centerIn: parent
                 visible: blockList.count === 0
                 width: parent.width * 0.8
-                spacing: Theme.spacing.medium
-
-                LogosText {
-                    Layout.fillWidth: true
-                    horizontalAlignment: Text.AlignHCenter
-                    wrapMode: Text.WordWrap
-                    text: page.connected
-                          ? "No blocks indexed yet."
-                          : "No indexer running yet. Open Settings to configure and start it."
-                    color: Theme.palette.textMuted
-                    font.pixelSize: Theme.typography.secondaryText
-                }
-
-                Rectangle {
-                    visible: !page.connected
-                    Layout.alignment: Qt.AlignHCenter
-                    implicitHeight: 38
-                    implicitWidth: 160
-                    radius: Theme.spacing.radiusMedium
-                    color: openHover.hovered ? Qt.lighter(Theme.palette.primary, 1.1) : Theme.palette.primary
-
-                    HoverHandler { id: openHover }
-                    TapHandler { onTapped: if (page.explorer) page.explorer.navigateSettings() }
-
-                    LogosText {
-                        anchors.centerIn: parent
-                        text: "Open Settings"
-                        color: Theme.palette.background
-                        font.pixelSize: Theme.typography.secondaryText
-                        font.weight: Theme.typography.weightBold
-                    }
-                }
+                horizontalAlignment: Text.AlignHCenter
+                wrapMode: Text.WordWrap
+                text: page.emptyStateText()
+                color: Theme.palette.textMuted
+                font.pixelSize: Theme.typography.secondaryText
             }
         }
     }
