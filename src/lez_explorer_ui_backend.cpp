@@ -588,9 +588,9 @@ QString LezExplorerUiBackend::readConfigFile() const
 
 bool LezExplorerUiBackend::startIndexerFromFile()
 {
-    // start_indexer is idempotent and won't restart a running indexer, so stop
-    // any current one first — this is what lets a re-saved config (e.g. a new
-    // bedrock addr) actually take effect. No-op on the first start.
+    // stops the indexer if it's already running, then starts it with the config file path.
+    //
+    // this has the effect of "restarting" the indexer with the new config.
     modules().lez_indexer_module.stop_indexer();
     const qlonglong code = modules().lez_indexer_module.start_indexer(configFilePath());
     if (code != 0) {
