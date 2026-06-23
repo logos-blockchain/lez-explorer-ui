@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <utility>
 
+#include <QCoreApplication>
 #include <QDateTime>
 #include <QDir>
 #include <QFile>
@@ -220,7 +221,13 @@ LezExplorerUiBackend::LezExplorerUiBackend()
     setDefaultConfig(QString::fromUtf8(kDefaultConfig));
 }
 
-LezExplorerUiBackend::~LezExplorerUiBackend() = default;
+LezExplorerUiBackend::~LezExplorerUiBackend()
+{
+    // Defensive: ensure no poll fires while the backend is being torn down.
+    if (m_pollTimer) {
+        m_pollTimer->stop();
+    }
+}
 
 void LezExplorerUiBackend::onContextReady()
 {
@@ -238,6 +245,17 @@ void LezExplorerUiBackend::onContextReady()
     m_pollTimer->setInterval(kPollIntervalMs);
     connect(m_pollTimer, &QTimer::timeout, this, &LezExplorerUiBackend::pollTip);
     m_pollTimer->start();
+
+    // pollTip() makes a synchronous cross-process call into lez_indexer_module.
+    // On shutdown the host SIGTERMs that dependency and only waits ~3s before
+    // SIGKILL, while our IPC timeout is ~20s — so a poll landing mid-teardown
+    // blocks on a dead peer and freezes the window. Stop polling the instant the
+    // app starts quitting to close that window from our side.
+    connect(qApp, &QCoreApplication::aboutToQuit, this, [this]() {
+        if (m_pollTimer) {
+            m_pollTimer->stop();
+        }
+    });
 
     // Kick an immediate poll so the view fills without waiting a full interval.
     pollTip();
