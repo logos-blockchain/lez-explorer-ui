@@ -21,16 +21,16 @@
         "logos-module-builder": "logos-module-builder_4"
       },
       "locked": {
-        "lastModified": 1782222303,
-        "narHash": "sha256-T//08rBmSvOOhvZZ5if8Gnaq1okEuSGt2ASym1eDyPY=",
-        "ref": "erhant/migr-to-logos-module-builder-update-LEZ",
-        "rev": "06396d7aeccdd7c3e7310c5acf4e687c12109052",
-        "revCount": 47,
+        "lastModified": 1782229998,
+        "narHash": "sha256-SmYzzRGT239/hXnBdUldILvcCdObeNufvUPJLopOCKM=",
+        "ref": "main",
+        "rev": "385c0ce6a042eb9b211dbd95bd0f9ee94864f148",
+        "revCount": 52,
         "type": "git",
         "url": "https://github.com/logos-blockchain/lez-indexer-module"
       },
       "original": {
-        "ref": "erhant/migr-to-logos-module-builder-update-LEZ",
+        "ref": "main",
         "type": "git",
         "url": "https://github.com/logos-blockchain/lez-indexer-module"
       }
