@@ -35,7 +35,7 @@ constexpr quint64 kGapRebuildThreshold = 8;
 const char* const kDefaultConfig = R"JSON({
     "consensus_info_polling_interval": "1s",
     "bedrock_config": {
-        "addr": "http://localhost:8080",
+        "addr": "http://localhost:18080",
         "backoff": {
             "start_delay": "100ms",
             "max_retries": 5
@@ -588,6 +588,10 @@ QString LezExplorerUiBackend::readConfigFile() const
 
 bool LezExplorerUiBackend::startIndexerFromFile()
 {
+    // start_indexer is idempotent and won't restart a running indexer, so stop
+    // any current one first — this is what lets a re-saved config (e.g. a new
+    // bedrock addr) actually take effect. No-op on the first start.
+    modules().lez_indexer_module.stop_indexer();
     const qlonglong code = modules().lez_indexer_module.start_indexer(configFilePath());
     if (code != 0) {
         emit error(QStringLiteral("start_indexer failed (code %1)").arg(code));
