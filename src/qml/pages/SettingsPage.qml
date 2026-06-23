@@ -140,9 +140,7 @@ Item {
             return;
         }
         page.setStatus("Saving…", false);
-        // Port is an internal detail of the indexer's own RPC listener; the
-        // explorer reads over the Logos protocol, so we pass "" (keep default).
-        logos.watch(page.backend.applyConfigJson(editor.text, ""),
+        logos.watch(page.backend.applyConfigJson(editor.text),
             function (ok) {
                 if (ok) {
                     page.setStatus("Saved. Indexer starting…", false);

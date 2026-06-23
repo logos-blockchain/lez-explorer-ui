@@ -39,7 +39,7 @@ public:
     void onContextReady() override;
 
     // .rep SLOTs.
-    bool applyConfigJson(QString json, QString port) override;
+    bool applyConfigJson(QString json) override;
     void refreshBlocks() override;
     void loadMoreBlocks() override;
     QVariantMap getBlockById(QString id) override;
@@ -52,6 +52,9 @@ public:
 private:
     // Tip poll: detect new heads and append/rebuild the recent-blocks feed.
     void pollTip();
+    // Parse the indexer's status JSON, publish the `syncStatus` PROP + the
+    // legacy `connectionStatus`, and return the indexed tip (0 if none yet).
+    quint64 applySyncStatus(const QString& json);
     // Fetch a single block as a normalized map ({} if missing).
     QVariantMap fetchBlock(quint64 blockId);
     // Parse a getBlocks(...) JSON array payload into a list of block maps.
@@ -65,7 +68,6 @@ private:
     // start_indexer from configFilePath(); returns true on success.
     bool startIndexerFromFile();
 
-    QString m_port = QStringLiteral("8779");
     QString m_configFilePath;
     QVariantList m_recentBlocks;
     quint64 m_newestLoadedId = 0; // highest block id currently in m_recentBlocks

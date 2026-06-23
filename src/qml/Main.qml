@@ -109,6 +109,8 @@ Rectangle {
 
         SearchBar {
             Layout.fillWidth: true
+            // Only searchable once the indexer is actually answering.
+            enabled: root.backend && root.backend.connectionStatus === "Connected"
             onSearchRequested: function (query) {
                 if (!root.backend || query.trim().length === 0)
                     return;

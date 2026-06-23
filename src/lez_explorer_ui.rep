@@ -13,10 +13,15 @@ class LezExplorerUi
     // Recent-blocks feed shown on the home page (newest first). Backend-owned:
     // the 2 s poll prepends new heads and "Load more" appends older pages.
     PROP(QVariantList recentBlocks READONLY)
-    // Tip block id (from getLastFinalizedBlockId).
+    // Tip block id (from the indexer status' indexedBlockId).
     PROP(qlonglong chainHeight=0 READONLY)
     // "Connecting" / "Connected" / "Error" — drives the health indicator.
     PROP(QString connectionStatus READONLY)
+    // Ingestion status for the first-launch/sync banner, refreshed by the tip
+    // poll. Map of { state: "starting"|"syncing"|"caught_up"|"error",
+    // blockId: qulonglong, error: QString }. Lets the view show the current
+    // phase (or the error) so "catching up" reads differently from "failed".
+    PROP(QVariantMap syncStatus READONLY)
     // The indexer config JSON currently in effect ("" until one is saved). The
     // Settings editor seeds from this (falling back to defaultConfig).
     PROP(QString configText READONLY)
@@ -25,10 +30,9 @@ class LezExplorerUi
     PROP(QString defaultConfig READONLY)
 
     // Persist `json` as the indexer config and (re)start ingestion from it, then
-    // refresh the feed. `port` is the indexer RPC port (blank keeps the current
-    // one). The backend writes the JSON to a file itself — the UI never deals
-    // with paths. Returns true on success.
-    SLOT(bool applyConfigJson(QString json, QString port))
+    // refresh the feed. The backend writes the JSON to a file itself — the UI
+    // never deals with paths. Returns true on success.
+    SLOT(bool applyConfigJson(QString json))
     // Reload the latest page into recentBlocks and re-baseline the poller.
     SLOT(void refreshBlocks())
     // Append the next older page of blocks to recentBlocks.
