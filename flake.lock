@@ -154,11 +154,11 @@
         "logos-module-builder": "logos-module-builder_4"
       },
       "locked": {
-        "lastModified": 1782740683,
-        "narHash": "sha256-5FMvtkt9MAzW3mJkJb25uN99PhVr6iH1HaaqzGol1f0=",
+        "lastModified": 1782747538,
+        "narHash": "sha256-Yqups9PRZuoStlehNUYwOnCT59cr43DE2bYS29nHM1g=",
         "ref": "main",
-        "rev": "78d33cccf7540b628d445b826b63d2d038aa9a1c",
-        "revCount": 54,
+        "rev": "f1c334555d93559330c9e80b9d0a02b4914d8f0a",
+        "revCount": 56,
         "type": "git",
         "url": "https://github.com/logos-blockchain/lez-indexer-module"
       },
