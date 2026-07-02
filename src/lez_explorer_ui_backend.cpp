@@ -400,6 +400,14 @@ bool LezExplorerUiBackend::applyConfigJson(QString json) {
 }
 
 bool LezExplorerUiBackend::resetIndexerCache() {
+    // A saved config is required: reset_storage reads the channel from it, and we
+    // restart from it afterwards. Without one there's nothing to reset against, so
+    // don't wipe-then-fail-to-restart.
+    if (readConfigFile().trimmed().isEmpty()) {
+        emit error(QStringLiteral("Save an indexer config before deleting the cache."));
+        return false;
+    }
+
     // reset_storage stops the indexer and deletes its RocksDB store; then we
     // restart from the saved config so it re-indexes the current chain from
     // scratch. The recovery path for a store left stale against a reset chain.

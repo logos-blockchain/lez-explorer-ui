@@ -155,6 +155,13 @@ Item {
     function resetCache() {
         if (!page.backend)
             return;
+        // Nothing to reset to until a config has been saved; don't arm the
+        // destructive confirm — point the user at Save first.
+        if (!page.backend.configText || page.backend.configText.length === 0) {
+            page.confirmingReset = false;
+            page.setStatus("Save an indexer config first, then you can delete the cache.", true);
+            return;
+        }
         if (!page.confirmingReset) {
             page.confirmingReset = true;
             page.setStatus("Click “Confirm delete” to wipe the local index and re-sync from scratch.", true);
