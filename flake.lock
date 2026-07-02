@@ -154,16 +154,16 @@
         "logos-module-builder": "logos-module-builder_4"
       },
       "locked": {
-        "lastModified": 1782994048,
+        "lastModified": 1783003719,
         "narHash": "sha256-SxNuNlv+chXZhdZUcd9CF6k+Eajgb2vpTaAoe0pGyCw=",
-        "ref": "erhant/bump-lez-and-fix-logging",
-        "rev": "57766ef2a8c34b6d11de506afd6ee323a04804c7",
-        "revCount": 64,
+        "ref": "main",
+        "rev": "62c1af660f5b2b57fe4fa0e7feb5ba3cd650c307",
+        "revCount": 65,
         "type": "git",
         "url": "https://github.com/logos-blockchain/lez-indexer-module"
       },
       "original": {
-        "ref": "erhant/bump-lez-and-fix-logging",
+        "ref": "main",
         "type": "git",
         "url": "https://github.com/logos-blockchain/lez-indexer-module"
       }
