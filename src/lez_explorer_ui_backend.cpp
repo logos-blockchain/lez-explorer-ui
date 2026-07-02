@@ -24,312 +24,286 @@
 
 namespace {
 
-constexpr int kPollIntervalMs = 2000;
-// Above this gap we rebuild the feed from the backend rather than fetch every
-// missing block one by one (matches the former LpIndexerService threshold).
-constexpr quint64 kGapRebuildThreshold = 8;
+    constexpr int kPollIntervalMs = 2000;
+    // Above this gap we rebuild the feed from the backend rather than fetch every
+    // missing block one by one (matches the former LpIndexerService threshold).
+    constexpr quint64 kGapRebuildThreshold = 8;
 
-// Starter config shown in the Settings editor (and its "Reset to default").
-// A working local-dev indexer config; the user edits the fields (bedrock addr,
-// channel id, initial accounts/commitments, signing key, ...) and saves.
-const char* const kDefaultConfig = R"JSON({
+    // Map the indexer FFI's OperationStatus to a human message.
+    QString startErrorMessage(qlonglong code) {
+        switch (code) {
+        case 2: // OperationStatus::InitializationError
+            return QStringLiteral(
+                "Indexer failed to initialize: This is usually a "
+                "storage problem. The data directory is locked by another running "
+                "indexer / isn't writable, or there is an invalid config field."
+            );
+        case 3: // OperationStatus::ClientError
+            return QStringLiteral(
+                "Indexer client error while starting: check the bedrock "
+                "node address in the config and ensure the node is reachable."
+            );
+        case 1: // OperationStatus::NullPointer
+            return QStringLiteral("Indexer failed to start (NullPointer).");
+        default:
+            return QStringLiteral("Indexer failed to start (OperationStatus %1).").arg(code);
+        }
+    }
+
+    // Starter config shown in the Settings editor (and its "Reset to default").
+    // A working local-dev indexer config; the user edits the fields (bedrock addr,
+    // channel id, initial accounts/commitments, signing key, ...) and saves.
+    const char* const kDefaultConfig = R"JSON({
     "consensus_info_polling_interval": "1s",
     "bedrock_config": {
-        "addr": "http://localhost:18080",
+        "addr": "http://localhost:8080",
         "backoff": {
             "start_delay": "100ms",
             "max_retries": 5
         }
     },
-    "channel_id": "0101010101010101010101010101010101010101010101010101010101010101",
-    "initial_accounts": [
-        { "account_id": "CbgR6tj5kWx5oziiFptM7jMvrQeYY3Mzaao6ciuhSr2r", "balance": 10000 },
-        { "account_id": "2RHZhw9h534Zr3eq2RGhQete2Hh667foECzXPmSkGni2", "balance": 20000 }
-    ],
-    "initial_commitments": [],
-    "signing_key": [
-        37, 37, 37, 37, 37, 37, 37, 37, 37, 37, 37, 37, 37, 37, 37, 37,
-        37, 37, 37, 37, 37, 37, 37, 37, 37, 37, 37, 37, 37, 37, 37, 37
-    ]
+    "channel_id": "0101010101010101010101010101010101010101010101010101010101010101"
 })JSON";
 
-// 64/128-bit values arrive as decimal strings (to dodge JSON double precision
-// loss), but be lenient and also accept a JSON number.
-quint64 jsonU64(const QJsonValue& value)
-{
-    if (value.isString()) {
-        bool ok = false;
-        const qulonglong parsed = value.toString().toULongLong(&ok);
-        return ok ? parsed : 0;
-    }
-    if (value.isDouble()) {
-        const double number = value.toDouble();
-        return number > 0.0 ? static_cast<quint64>(number) : 0;
-    }
-    return 0;
-}
-
-QString jsonStr(const QJsonValue& value)
-{
-    if (value.isString()) {
-        return value.toString();
-    }
-    if (value.isDouble()) {
-        return QString::number(static_cast<qulonglong>(value.toDouble()));
-    }
-    return {};
-}
-
-// Account ids are Base58 (matching the wallet UI and canonical LEZ); block/tx
-// hashes are hex. These mirror the indexer module's codec so the explorer can
-// recognise an account-shaped query and always display the canonical Base58 form.
-const char* const kBase58Alphabet = "123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz";
-
-int base58Index(char c)
-{
-    for (int i = 0; i < 58; ++i) {
-        if (kBase58Alphabet[i] == c) {
-            return i;
+    // 64/128-bit values arrive as decimal strings (to dodge JSON double precision
+    // loss), but be lenient and also accept a JSON number.
+    quint64 jsonU64(const QJsonValue& value) {
+        if (value.isString()) {
+            bool ok = false;
+            const qulonglong parsed = value.toString().toULongLong(&ok);
+            return ok ? parsed : 0;
         }
+        if (value.isDouble()) {
+            const double number = value.toDouble();
+            return number > 0.0 ? static_cast<quint64>(number) : 0;
+        }
+        return 0;
     }
-    return -1;
-}
 
-// Decode a Base58 string (plain Bitcoin alphabet, no checksum) into raw bytes.
-// Returns false on any non-Base58 character. Leading '1's map to leading zeros.
-bool base58Decode(const QString& s, QByteArray& out)
-{
-    const QString t = s.trimmed();
-    if (t.isEmpty()) {
-        return false;
+    QString jsonStr(const QJsonValue& value) {
+        if (value.isString()) {
+            return value.toString();
+        }
+        if (value.isDouble()) {
+            return QString::number(static_cast<qulonglong>(value.toDouble()));
+        }
+        return {};
     }
-    int leadingZeros = 0;
-    for (int i = 0; i < t.size() && t.at(i) == QLatin1Char('1'); ++i) {
-        ++leadingZeros;
+
+    // Account ids are Base58 (matching the wallet UI and canonical LEZ); block/tx
+    // hashes are hex. These mirror the indexer module's codec so the explorer can
+    // recognise an account-shaped query and always display the canonical Base58
+    // form.
+    const char* const kBase58Alphabet = "123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz";
+
+    int base58Index(char c) {
+        for (int i = 0; i < 58; ++i) {
+            if (kBase58Alphabet[i] == c) {
+                return i;
+            }
+        }
+        return -1;
     }
-    QByteArray digits; // base-256, least-significant first
-    for (const QChar qc : t) {
-        const int idx = qc.unicode() < 128 ? base58Index(static_cast<char>(qc.unicode())) : -1;
-        if (idx < 0) {
+
+    // Decode a Base58 string (plain Bitcoin alphabet, no checksum) into raw bytes.
+    // Returns false on any non-Base58 character. Leading '1's map to leading zeros.
+    bool base58Decode(const QString& s, QByteArray& out) {
+        const QString t = s.trimmed();
+        if (t.isEmpty()) {
             return false;
         }
-        int carry = idx;
-        for (int j = 0; j < digits.size(); ++j) {
-            carry += static_cast<unsigned char>(digits[j]) * 58;
-            digits[j] = static_cast<char>(carry & 0xFF);
-            carry >>= 8;
+        int leadingZeros = 0;
+        for (int i = 0; i < t.size() && t.at(i) == QLatin1Char('1'); ++i) {
+            ++leadingZeros;
         }
-        while (carry > 0) {
-            digits.append(static_cast<char>(carry & 0xFF));
-            carry >>= 8;
+        QByteArray digits; // base-256, least-significant first
+        for (const QChar qc : t) {
+            const int idx = qc.unicode() < 128 ? base58Index(static_cast<char>(qc.unicode())) : -1;
+            if (idx < 0) {
+                return false;
+            }
+            int carry = idx;
+            for (int j = 0; j < digits.size(); ++j) {
+                carry += static_cast<unsigned char>(digits[j]) * 58;
+                digits[j] = static_cast<char>(carry & 0xFF);
+                carry >>= 8;
+            }
+            while (carry > 0) {
+                digits.append(static_cast<char>(carry & 0xFF));
+                carry >>= 8;
+            }
         }
-    }
-    out = QByteArray(leadingZeros, '\0');
-    for (int i = digits.size(); i-- > 0;) {
-        out.append(digits[i]);
-    }
-    return true;
-}
-
-// Base58-encode raw bytes (plain Bitcoin alphabet). Inverse of base58Decode.
-QString bytes32ToBase58(const QByteArray& data)
-{
-    int leadingZeros = 0;
-    while (leadingZeros < data.size() && data[leadingZeros] == '\0') {
-        ++leadingZeros;
-    }
-    QByteArray digits; // base-58, least-significant first
-    for (int i = 0; i < data.size(); ++i) {
-        int carry = static_cast<unsigned char>(data[i]);
-        for (int j = 0; j < digits.size(); ++j) {
-            carry += static_cast<unsigned char>(digits[j]) * 256;
-            digits[j] = static_cast<char>(carry % 58);
-            carry /= 58;
+        out = QByteArray(leadingZeros, '\0');
+        for (int i = digits.size(); i-- > 0;) {
+            out.append(digits[i]);
         }
-        while (carry > 0) {
-            digits.append(static_cast<char>(carry % 58));
-            carry /= 58;
+        return true;
+    }
+
+    // The account id if `query` is one, else "". Accounts are Base58 with a 32-byte
+    // payload — a 64-hex string is a block/tx hash, not an account (matches the web
+    // explorer's AccountId::from_str, which is Base58-only with no hex fallback).
+    QString accountIdOrEmpty(const QString& query) {
+        const QString trimmed = query.trimmed();
+        QByteArray decoded;
+        if (base58Decode(trimmed, decoded) && decoded.size() == 32) {
+            return trimmed;
         }
+        return {};
     }
-    QString out(leadingZeros, QLatin1Char('1'));
-    for (int i = digits.size(); i-- > 0;) {
-        out.append(QLatin1Char(kBase58Alphabet[static_cast<unsigned char>(digits[i])]));
-    }
-    return out;
-}
 
-// Canonical Base58 form of an account-id query, or "" if not account-shaped.
-// Accepts Base58 (must decode to 32 bytes) or 64-char hex (optionally 0x): a hex
-// search is normalised to Base58 so the result is displayed in canonical form.
-QString canonicalAccountId(const QString& query)
-{
-    const QString trimmed = query.trimmed();
-    QByteArray decoded;
-    if (base58Decode(trimmed, decoded) && decoded.size() == 32) {
-        return trimmed;
+    QString timestampText(quint64 timestamp) {
+        QDateTime dt;
+        // Tolerate either seconds or milliseconds since epoch.
+        if (timestamp > 1000000000000ULL) {
+            dt = QDateTime::fromMSecsSinceEpoch(static_cast<qint64>(timestamp), QTimeZone::UTC);
+        } else {
+            dt = QDateTime::fromSecsSinceEpoch(static_cast<qint64>(timestamp), QTimeZone::UTC);
+        }
+        if (!dt.isValid()) {
+            dt = QDateTime::currentDateTimeUtc();
+        }
+        return dt.toString(QStringLiteral("yyyy-MM-dd hh:mm:ss")) + QStringLiteral(" UTC");
     }
-    QString hex = trimmed;
-    if (hex.startsWith(QStringLiteral("0x"), Qt::CaseInsensitive)) {
-        hex = hex.mid(2);
-    }
-    static const QRegularExpression hexRe(QStringLiteral("^[0-9a-fA-F]{64}$"));
-    if (hexRe.match(hex).hasMatch()) {
-        return bytes32ToBase58(QByteArray::fromHex(hex.toLatin1()));
-    }
-    return {};
-}
 
-QString timestampText(quint64 timestamp)
-{
-    QDateTime dt;
-    // Tolerate either seconds or milliseconds since epoch.
-    if (timestamp > 1000000000000ULL) {
-        dt = QDateTime::fromMSecsSinceEpoch(static_cast<qint64>(timestamp), QTimeZone::UTC);
-    } else {
-        dt = QDateTime::fromSecsSinceEpoch(static_cast<qint64>(timestamp), QTimeZone::UTC);
-    }
-    if (!dt.isValid()) {
-        dt = QDateTime::currentDateTimeUtc();
-    }
-    return dt.toString(QStringLiteral("yyyy-MM-dd hh:mm:ss")) + QStringLiteral(" UTC");
-}
+    QVariantMap txObjectToMap(const QJsonObject& obj) {
+        QVariantMap tx;
+        if (obj.isEmpty()) {
+            return tx;
+        }
 
-QVariantMap txObjectToMap(const QJsonObject& obj)
-{
-    QVariantMap tx;
-    if (obj.isEmpty()) {
+        tx.insert(QStringLiteral("hash"), jsonStr(obj.value(QStringLiteral("hash"))));
+        const QString type = obj.value(QStringLiteral("type")).toString();
+        tx.insert(QStringLiteral("type"), type);
+
+        const auto accountsOf = [](const QJsonArray& arr) {
+            QVariantList accounts;
+            for (const auto& entry : arr) {
+                const QJsonObject account = entry.toObject();
+                QVariantMap ref;
+                ref.insert(QStringLiteral("accountId"), jsonStr(account.value(QStringLiteral("account_id"))));
+                QString nonce = jsonStr(account.value(QStringLiteral("nonce")));
+                ref.insert(QStringLiteral("nonce"), nonce.isEmpty() ? QStringLiteral("0") : nonce);
+                accounts.append(ref);
+            }
+            return accounts;
+        };
+
+        if (type == QLatin1String("Public")) {
+            tx.insert(QStringLiteral("programId"), jsonStr(obj.value(QStringLiteral("program_id"))));
+            tx.insert(QStringLiteral("accounts"), accountsOf(obj.value(QStringLiteral("accounts")).toArray()));
+            tx.insert(
+                QStringLiteral("instructionDataCount"), obj.value(QStringLiteral("instruction_data")).toArray().size()
+            );
+            tx.insert(QStringLiteral("signatureCount"), obj.value(QStringLiteral("signature_count")).toInt());
+        } else if (type == QLatin1String("PrivacyPreserving")) {
+            tx.insert(QStringLiteral("accounts"), accountsOf(obj.value(QStringLiteral("accounts")).toArray()));
+            tx.insert(
+                QStringLiteral("newCommitmentsCount"), obj.value(QStringLiteral("new_commitments_count")).toInt()
+            );
+            tx.insert(QStringLiteral("nullifiersCount"), obj.value(QStringLiteral("nullifiers_count")).toInt());
+            tx.insert(
+                QStringLiteral("encryptedStatesCount"), obj.value(QStringLiteral("encrypted_states_count")).toInt()
+            );
+            tx.insert(
+                QStringLiteral("validityWindowStart"),
+                static_cast<qlonglong>(jsonU64(obj.value(QStringLiteral("validity_window_start"))))
+            );
+            tx.insert(
+                QStringLiteral("validityWindowEnd"),
+                static_cast<qlonglong>(jsonU64(obj.value(QStringLiteral("validity_window_end"))))
+            );
+            tx.insert(QStringLiteral("signatureCount"), obj.value(QStringLiteral("signature_count")).toInt());
+            tx.insert(QStringLiteral("proofSizeBytes"), obj.value(QStringLiteral("proof_size")).toInt());
+        } else if (type == QLatin1String("ProgramDeployment")) {
+            tx.insert(QStringLiteral("bytecodeSizeBytes"), obj.value(QStringLiteral("bytecode_size")).toInt());
+        }
+
         return tx;
     }
 
-    tx.insert(QStringLiteral("hash"), jsonStr(obj.value(QStringLiteral("hash"))));
-    const QString type = obj.value(QStringLiteral("type")).toString();
-    tx.insert(QStringLiteral("type"), type);
-
-    const auto accountsOf = [](const QJsonArray& arr) {
-        QVariantList accounts;
-        for (const auto& entry : arr) {
-            const QJsonObject account = entry.toObject();
-            QVariantMap ref;
-            ref.insert(QStringLiteral("accountId"), jsonStr(account.value(QStringLiteral("account_id"))));
-            QString nonce = jsonStr(account.value(QStringLiteral("nonce")));
-            ref.insert(QStringLiteral("nonce"), nonce.isEmpty() ? QStringLiteral("0") : nonce);
-            accounts.append(ref);
+    QVariantMap blockObjectToMap(const QJsonObject& obj) {
+        QVariantMap block;
+        if (obj.isEmpty()) {
+            return block;
         }
-        return accounts;
-    };
 
-    if (type == QLatin1String("Public")) {
-        tx.insert(QStringLiteral("programId"), jsonStr(obj.value(QStringLiteral("program_id"))));
-        tx.insert(QStringLiteral("accounts"), accountsOf(obj.value(QStringLiteral("accounts")).toArray()));
-        tx.insert(QStringLiteral("instructionDataCount"),
-            obj.value(QStringLiteral("instruction_data")).toArray().size());
-        tx.insert(QStringLiteral("signatureCount"), obj.value(QStringLiteral("signature_count")).toInt());
-    } else if (type == QLatin1String("PrivacyPreserving")) {
-        tx.insert(QStringLiteral("accounts"), accountsOf(obj.value(QStringLiteral("accounts")).toArray()));
-        tx.insert(QStringLiteral("newCommitmentsCount"), obj.value(QStringLiteral("new_commitments_count")).toInt());
-        tx.insert(QStringLiteral("nullifiersCount"), obj.value(QStringLiteral("nullifiers_count")).toInt());
-        tx.insert(QStringLiteral("encryptedStatesCount"), obj.value(QStringLiteral("encrypted_states_count")).toInt());
-        tx.insert(QStringLiteral("validityWindowStart"),
-            static_cast<qlonglong>(jsonU64(obj.value(QStringLiteral("validity_window_start")))));
-        tx.insert(QStringLiteral("validityWindowEnd"),
-            static_cast<qlonglong>(jsonU64(obj.value(QStringLiteral("validity_window_end")))));
-        tx.insert(QStringLiteral("signatureCount"), obj.value(QStringLiteral("signature_count")).toInt());
-        tx.insert(QStringLiteral("proofSizeBytes"), obj.value(QStringLiteral("proof_size")).toInt());
-    } else if (type == QLatin1String("ProgramDeployment")) {
-        tx.insert(QStringLiteral("bytecodeSizeBytes"), obj.value(QStringLiteral("bytecode_size")).toInt());
-    }
+        block.insert(QStringLiteral("blockId"), static_cast<qlonglong>(jsonU64(obj.value(QStringLiteral("block_id")))));
+        block.insert(QStringLiteral("hash"), jsonStr(obj.value(QStringLiteral("hash"))));
+        block.insert(QStringLiteral("prevBlockHash"), jsonStr(obj.value(QStringLiteral("prev_block_hash"))));
+        block.insert(QStringLiteral("signature"), jsonStr(obj.value(QStringLiteral("signature"))));
+        block.insert(QStringLiteral("timestampText"), timestampText(jsonU64(obj.value(QStringLiteral("timestamp")))));
 
-    return tx;
-}
+        const QString status = obj.value(QStringLiteral("bedrock_status")).toString(QStringLiteral("Pending"));
+        block.insert(QStringLiteral("status"), status);
 
-QVariantMap blockObjectToMap(const QJsonObject& obj)
-{
-    QVariantMap block;
-    if (obj.isEmpty()) {
+        const QJsonArray txArray = obj.value(QStringLiteral("transactions")).toArray();
+        QVariantList transactions;
+        transactions.reserve(txArray.size());
+        for (const auto& txValue : txArray) {
+            const QVariantMap tx = txObjectToMap(txValue.toObject());
+            if (!tx.isEmpty()) {
+                transactions.append(tx);
+            }
+        }
+        block.insert(QStringLiteral("transactions"), transactions);
+        block.insert(QStringLiteral("txCount"), transactions.size());
+
         return block;
     }
 
-    block.insert(QStringLiteral("blockId"), static_cast<qlonglong>(jsonU64(obj.value(QStringLiteral("block_id")))));
-    block.insert(QStringLiteral("hash"), jsonStr(obj.value(QStringLiteral("hash"))));
-    block.insert(QStringLiteral("prevBlockHash"), jsonStr(obj.value(QStringLiteral("prev_block_hash"))));
-    block.insert(QStringLiteral("signature"), jsonStr(obj.value(QStringLiteral("signature"))));
-    block.insert(QStringLiteral("timestampText"), timestampText(jsonU64(obj.value(QStringLiteral("timestamp")))));
-
-    const QString status = obj.value(QStringLiteral("bedrock_status")).toString(QStringLiteral("Pending"));
-    block.insert(QStringLiteral("status"), status);
-
-    const QJsonArray txArray = obj.value(QStringLiteral("transactions")).toArray();
-    QVariantList transactions;
-    transactions.reserve(txArray.size());
-    for (const auto& txValue : txArray) {
-        const QVariantMap tx = txObjectToMap(txValue.toObject());
-        if (!tx.isEmpty()) {
-            transactions.append(tx);
+    QVariantMap blockJsonToMap(const QString& json) {
+        if (json.isEmpty()) {
+            return {};
         }
+        const QJsonDocument doc = QJsonDocument::fromJson(json.toUtf8());
+        return doc.isObject() ? blockObjectToMap(doc.object()) : QVariantMap();
     }
-    block.insert(QStringLiteral("transactions"), transactions);
-    block.insert(QStringLiteral("txCount"), transactions.size());
 
-    return block;
-}
+    QVariantMap accountJsonToMap(const QString& accountId, const QString& json) {
+        if (json.isEmpty()) {
+            return {};
+        }
+        const QJsonDocument doc = QJsonDocument::fromJson(json.toUtf8());
+        if (!doc.isObject()) {
+            return {};
+        }
+        const QJsonObject obj = doc.object();
 
-QVariantMap blockJsonToMap(const QString& json)
-{
-    if (json.isEmpty()) {
-        return {};
+        QVariantMap account;
+        account.insert(QStringLiteral("accountId"),
+                       accountId); // payload omits it; inject the queried id
+        account.insert(QStringLiteral("programOwner"), jsonStr(obj.value(QStringLiteral("program_owner"))));
+        QString balance = jsonStr(obj.value(QStringLiteral("balance")));
+        account.insert(QStringLiteral("balance"), balance.isEmpty() ? QStringLiteral("0") : balance);
+        QString nonce = jsonStr(obj.value(QStringLiteral("nonce")));
+        account.insert(QStringLiteral("nonce"), nonce.isEmpty() ? QStringLiteral("0") : nonce);
+        account.insert(QStringLiteral("dataSizeBytes"), obj.value(QStringLiteral("data_size")).toInt());
+        return account;
     }
-    const QJsonDocument doc = QJsonDocument::fromJson(json.toUtf8());
-    return doc.isObject() ? blockObjectToMap(doc.object()) : QVariantMap();
-}
 
-QVariantMap accountJsonToMap(const QString& accountId, const QString& json)
-{
-    if (json.isEmpty()) {
-        return {};
+    QVariantMap txJsonToMap(const QString& json) {
+        if (json.isEmpty()) {
+            return {};
+        }
+        const QJsonDocument doc = QJsonDocument::fromJson(json.toUtf8());
+        return doc.isObject() ? txObjectToMap(doc.object()) : QVariantMap();
     }
-    const QJsonDocument doc = QJsonDocument::fromJson(json.toUtf8());
-    if (!doc.isObject()) {
-        return {};
-    }
-    const QJsonObject obj = doc.object();
-
-    QVariantMap account;
-    account.insert(QStringLiteral("accountId"), accountId); // payload omits it; inject the queried id
-    account.insert(QStringLiteral("programOwner"), jsonStr(obj.value(QStringLiteral("program_owner"))));
-    QString balance = jsonStr(obj.value(QStringLiteral("balance")));
-    account.insert(QStringLiteral("balance"), balance.isEmpty() ? QStringLiteral("0") : balance);
-    QString nonce = jsonStr(obj.value(QStringLiteral("nonce")));
-    account.insert(QStringLiteral("nonce"), nonce.isEmpty() ? QStringLiteral("0") : nonce);
-    account.insert(QStringLiteral("dataSizeBytes"), obj.value(QStringLiteral("data_size")).toInt());
-    return account;
-}
-
-QVariantMap txJsonToMap(const QString& json)
-{
-    if (json.isEmpty()) {
-        return {};
-    }
-    const QJsonDocument doc = QJsonDocument::fromJson(json.toUtf8());
-    return doc.isObject() ? txObjectToMap(doc.object()) : QVariantMap();
-}
 
 } // namespace
 
-LezExplorerUiBackend::LezExplorerUiBackend()
-{
+LezExplorerUiBackend::LezExplorerUiBackend() {
     setDefaultConfig(QString::fromUtf8(kDefaultConfig));
 }
 
-LezExplorerUiBackend::~LezExplorerUiBackend()
-{
+LezExplorerUiBackend::~LezExplorerUiBackend() {
     // Defensive: ensure no poll fires while the backend is being torn down.
     if (m_pollTimer) {
         m_pollTimer->stop();
     }
 }
 
-void LezExplorerUiBackend::onContextReady()
-{
+void LezExplorerUiBackend::onContextReady() {
     setConnectionStatus(QStringLiteral("Connecting"));
 
     // Reload + auto-start the previously-saved config, if any (set-once UX).
@@ -360,8 +334,7 @@ void LezExplorerUiBackend::onContextReady()
     pollTip();
 }
 
-bool LezExplorerUiBackend::applyConfigJson(QString json)
-{
+bool LezExplorerUiBackend::applyConfigJson(QString json) {
     const QString trimmed = json.trimmed();
     if (trimmed.isEmpty()) {
         emit error(QStringLiteral("Config is empty."));
@@ -390,8 +363,33 @@ bool LezExplorerUiBackend::applyConfigJson(QString json)
     return ok;
 }
 
-void LezExplorerUiBackend::refreshBlocks()
-{
+bool LezExplorerUiBackend::resetIndexerCache() {
+    // A saved config is required: reset_storage reads the channel from it, and we
+    // restart from it afterwards. Without one there's nothing to reset against, so
+    // don't wipe-then-fail-to-restart.
+    if (readConfigFile().trimmed().isEmpty()) {
+        emit error(QStringLiteral("Save an indexer config before deleting the cache."));
+        return false;
+    }
+
+    // reset_storage stops the indexer and deletes its RocksDB store; then we
+    // restart from the saved config so it re-indexes the current chain from
+    // scratch. The recovery path for a store left stale against a reset chain.
+    const qlonglong code = modules().lez_indexer_module.reset_storage(configFilePath());
+    if (code != 0) {
+        emit error(QStringLiteral("Failed to delete the indexer cache (code %1).").arg(code));
+        return false;
+    }
+
+    // Store is empty now; re-baseline the poller and restart ingestion.
+    m_lastPolledTip = 0;
+    m_polledOnce = false;
+    const bool ok = startIndexerFromFile();
+    refreshBlocks();
+    return ok;
+}
+
+void LezExplorerUiBackend::refreshBlocks() {
     const QString json = modules().lez_indexer_module.getBlocks(QString(), QStringLiteral("10"));
     m_recentBlocks = parseBlockArrayJson(json);
 
@@ -409,13 +407,12 @@ void LezExplorerUiBackend::refreshBlocks()
     setRecentBlocks(m_recentBlocks);
 }
 
-void LezExplorerUiBackend::loadMoreBlocks()
-{
+void LezExplorerUiBackend::loadMoreBlocks() {
     if (m_oldestLoadedId <= 1) {
         return; // already at genesis
     }
-    const QString json
-        = modules().lez_indexer_module.getBlocks(QString::number(m_oldestLoadedId), QStringLiteral("10"));
+    const QString json =
+        modules().lez_indexer_module.getBlocks(QString::number(m_oldestLoadedId), QStringLiteral("10"));
     const QVariantList older = parseBlockArrayJson(json);
     if (older.isEmpty()) {
         return;
@@ -431,30 +428,26 @@ void LezExplorerUiBackend::loadMoreBlocks()
     setRecentBlocks(m_recentBlocks);
 }
 
-QVariantMap LezExplorerUiBackend::getBlockById(QString id)
-{
+QVariantMap LezExplorerUiBackend::getBlockById(QString id) {
     return blockJsonToMap(modules().lez_indexer_module.getBlockById(id));
 }
 
-QVariantMap LezExplorerUiBackend::getBlockByHash(QString hash)
-{
+QVariantMap LezExplorerUiBackend::getBlockByHash(QString hash) {
     return blockJsonToMap(modules().lez_indexer_module.getBlockByHash(hash));
 }
 
-QVariantMap LezExplorerUiBackend::getTransaction(QString hash)
-{
+QVariantMap LezExplorerUiBackend::getTransaction(QString hash) {
     return txJsonToMap(modules().lez_indexer_module.getTransaction(hash));
 }
 
-QVariantMap LezExplorerUiBackend::getAccount(QString accountId)
-{
+QVariantMap LezExplorerUiBackend::getAccount(QString accountId) {
     return accountJsonToMap(accountId, modules().lez_indexer_module.getAccount(accountId));
 }
 
-QVariantList LezExplorerUiBackend::getTransactionsByAccount(QString accountId, int offset, int limit)
-{
+QVariantList LezExplorerUiBackend::getTransactionsByAccount(QString accountId, int offset, int limit) {
     const QString json = modules().lez_indexer_module.getTransactionsByAccount(
-        accountId, QString::number(offset), QString::number(limit));
+        accountId, QString::number(offset), QString::number(limit)
+    );
     if (json.isEmpty()) {
         return {};
     }
@@ -475,8 +468,7 @@ QVariantList LezExplorerUiBackend::getTransactionsByAccount(QString accountId, i
     return result;
 }
 
-QVariantMap LezExplorerUiBackend::search(QString query)
-{
+QVariantMap LezExplorerUiBackend::search(QString query) {
     QVariantList blocks;
     QVariantList transactions;
     QVariantList accounts;
@@ -495,10 +487,10 @@ QVariantMap LezExplorerUiBackend::search(QString query)
             }
         }
 
-        // Account ids are Base58 (canonical) or 64-char hex; query and display by
-        // the canonical Base58 form. getAccount injects the id, so a payload with
-        // only that one field means "not found".
-        const QString accountId = canonicalAccountId(trimmed);
+        // Account ids are Base58 only (a hex string is a block/tx hash, not an
+        // account). getAccount injects the id, so a payload with only that one
+        // field means "not found".
+        const QString accountId = accountIdOrEmpty(trimmed);
         if (!accountId.isEmpty()) {
             const QVariantMap account = getAccount(accountId);
             if (account.size() > 1) {
@@ -528,8 +520,7 @@ QVariantMap LezExplorerUiBackend::search(QString query)
     return results;
 }
 
-quint64 LezExplorerUiBackend::applySyncStatus(const QString& json)
-{
+quint64 LezExplorerUiBackend::applySyncStatus(const QString& json) {
     // Empty JSON means the indexer isn't running (not configured / not started);
     // a real status always carries one of the core's states.
     QString state = QStringLiteral("stopped");
@@ -565,8 +556,7 @@ quint64 LezExplorerUiBackend::applySyncStatus(const QString& json)
     return blockId;
 }
 
-void LezExplorerUiBackend::pollTip()
-{
+void LezExplorerUiBackend::pollTip() {
     // One status call drives both the sync banner and the feed: indexedBlockId
     // is the L2 tip we page from.
     const quint64 tip = applySyncStatus(modules().lez_indexer_module.getStatus());
@@ -614,13 +604,11 @@ void LezExplorerUiBackend::pollTip()
     setRecentBlocks(m_recentBlocks);
 }
 
-QVariantMap LezExplorerUiBackend::fetchBlock(quint64 blockId)
-{
+QVariantMap LezExplorerUiBackend::fetchBlock(quint64 blockId) {
     return blockJsonToMap(modules().lez_indexer_module.getBlockById(QString::number(blockId)));
 }
 
-QVariantList LezExplorerUiBackend::parseBlockArrayJson(const QString& json) const
-{
+QVariantList LezExplorerUiBackend::parseBlockArrayJson(const QString& json) const {
     if (json.isEmpty()) {
         return {};
     }
@@ -642,29 +630,26 @@ QVariantList LezExplorerUiBackend::parseBlockArrayJson(const QString& json) cons
 }
 
 namespace {
-// The writable path where the edited config JSON is persisted and the indexer
-// is started from (so the UI never deals with paths). Same logic, shared by the
-// const and non-const accessors.
-QString resolveConfigFilePath()
-{
-    QString dir = QStandardPaths::writableLocation(QStandardPaths::AppLocalDataLocation);
-    if (dir.isEmpty()) {
-        dir = QDir::tempPath();
+    // The writable path where the edited config JSON is persisted and the indexer
+    // is started from (so the UI never deals with paths). Same logic, shared by the
+    // const and non-const accessors.
+    QString resolveConfigFilePath() {
+        QString dir = QStandardPaths::writableLocation(QStandardPaths::AppLocalDataLocation);
+        if (dir.isEmpty()) {
+            dir = QDir::tempPath();
+        }
+        return QDir(dir).filePath(QStringLiteral("indexer_config.json"));
     }
-    return QDir(dir).filePath(QStringLiteral("indexer_config.json"));
-}
 } // namespace
 
-QString LezExplorerUiBackend::configFilePath()
-{
+QString LezExplorerUiBackend::configFilePath() {
     if (m_configFilePath.isEmpty()) {
         m_configFilePath = resolveConfigFilePath();
     }
     return m_configFilePath;
 }
 
-bool LezExplorerUiBackend::writeConfigFile(const QString& json)
-{
+bool LezExplorerUiBackend::writeConfigFile(const QString& json) {
     const QString path = configFilePath();
     const QDir dir = QFileInfo(path).dir();
     if (!dir.exists() && !dir.mkpath(QStringLiteral("."))) {
@@ -680,8 +665,7 @@ bool LezExplorerUiBackend::writeConfigFile(const QString& json)
     return ok;
 }
 
-QString LezExplorerUiBackend::readConfigFile() const
-{
+QString LezExplorerUiBackend::readConfigFile() const {
     QFile file(m_configFilePath.isEmpty() ? resolveConfigFilePath() : m_configFilePath);
     if (!file.exists() || !file.open(QIODevice::ReadOnly | QIODevice::Text)) {
         return {};
@@ -691,15 +675,15 @@ QString LezExplorerUiBackend::readConfigFile() const
     return content;
 }
 
-bool LezExplorerUiBackend::startIndexerFromFile()
-{
-    // stops the indexer if it's already running, then starts it with the config file path.
+bool LezExplorerUiBackend::startIndexerFromFile() {
+    // stops the indexer if it's already running, then starts it with the config
+    // file path.
     //
     // this has the effect of "restarting" the indexer with the new config.
     modules().lez_indexer_module.stop_indexer();
     const qlonglong code = modules().lez_indexer_module.start_indexer(configFilePath());
     if (code != 0) {
-        emit error(QStringLiteral("start_indexer failed (code %1)").arg(code));
+        emit error(startErrorMessage(code));
         return false;
     }
     return true;

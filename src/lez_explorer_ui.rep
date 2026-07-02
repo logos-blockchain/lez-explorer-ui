@@ -33,6 +33,11 @@ class LezExplorerUi
     // refresh the feed. The backend writes the JSON to a file itself — the UI
     // never deals with paths. Returns true on success.
     SLOT(bool applyConfigJson(QString json))
+    // Delete the indexer's RocksDB cache and restart from the saved config: the
+    // recovery path when the local store is stale against a different/reset chain
+    // (otherwise the indexer can sit at "caught up" on a mismatched store).
+    // Returns true on success.
+    SLOT(bool resetIndexerCache())
     // Reload the latest page into recentBlocks and re-baseline the poller.
     SLOT(void refreshBlocks())
     // Append the next older page of blocks to recentBlocks.

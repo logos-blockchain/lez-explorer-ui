@@ -11,6 +11,8 @@ Item {
     property var explorer
     readonly property var backend: explorer ? explorer.backend : null
     property bool statusIsError: false
+    // Armed by the first "Delete Cache" tap; a second tap actually wipes.
+    property bool confirmingReset: false
 
     Component.onCompleted: {
         // Seed the editor with the saved config, falling back to the template.
@@ -83,6 +85,25 @@ Item {
                 font.pixelSize: Theme.typography.secondaryText
             }
 
+            // Delete the indexer's RocksDB cache and re-sync (two-tap confirm).
+            Rectangle {
+                Layout.preferredHeight: 38
+                Layout.preferredWidth: 150
+                radius: Theme.spacing.radiusMedium
+                color: resetCacheHover.hovered ? Qt.lighter(Theme.palette.error, 1.1) : Theme.palette.error
+
+                HoverHandler { id: resetCacheHover }
+                TapHandler { onTapped: page.resetCache() }
+
+                LogosText {
+                    anchors.centerIn: parent
+                    text: page.confirmingReset ? "Confirm delete" : "Delete Cache"
+                    color: Theme.palette.background
+                    font.pixelSize: Theme.typography.secondaryText
+                    font.weight: Theme.typography.weightBold
+                }
+            }
+
             // Reset to the built-in template.
             Rectangle {
                 Layout.preferredHeight: 38
@@ -93,7 +114,7 @@ Item {
                 border.color: Theme.palette.borderSecondary
 
                 HoverHandler { id: resetHover }
-                TapHandler { onTapped: if (page.backend) { editor.text = page.backend.defaultConfig; page.setStatus("", false); } }
+                TapHandler { onTapped: if (page.backend) { page.confirmingReset = false; editor.text = page.backend.defaultConfig; page.setStatus("", false); } }
 
                 LogosText {
                     anchors.centerIn: parent
@@ -129,9 +150,43 @@ Item {
         statusLabel.text = message;
     }
 
+    // Delete the indexer's RocksDB cache and re-sync. First tap arms; a second
+    // tap confirms (it's destructive — wipes the local index).
+    function resetCache() {
+        if (!page.backend)
+            return;
+        // Nothing to reset to until a config has been saved; don't arm the
+        // destructive confirm — point the user at Save first.
+        if (!page.backend.configText || page.backend.configText.length === 0) {
+            page.confirmingReset = false;
+            page.setStatus("Save an indexer config first, then you can delete the cache.", true);
+            return;
+        }
+        if (!page.confirmingReset) {
+            page.confirmingReset = true;
+            page.setStatus("Click “Confirm delete” to wipe the local index and re-sync from scratch.", true);
+            return;
+        }
+        page.confirmingReset = false;
+        page.setStatus("Deleting cache…", false);
+        logos.watch(page.backend.resetIndexerCache(),
+            function (ok) {
+                if (ok) {
+                    page.setStatus("Cache deleted. Indexer restarting…", false);
+                    page.explorer.goHome();
+                }
+                // On failure the backend emits error() (shown by onError above).
+            },
+            function (err) {
+                page.setStatus("Error: " + err, true);
+            });
+    }
+
     function save() {
         if (!page.backend)
             return;
+        // A save cancels a pending cache-delete confirmation.
+        page.confirmingReset = false;
         // Validate locally first for an immediate, precise error.
         try {
             JSON.parse(editor.text);
@@ -145,9 +200,9 @@ Item {
                 if (ok) {
                     page.setStatus("Saved. Indexer starting…", false);
                     page.explorer.goHome();
-                } else {
-                    page.setStatus("Save failed — check the config and try again.", true);
                 }
+                // On failure the backend emits error() with a specific reason
+                // (shown by onError above) — don't clobber it with a generic line.
             },
             function (err) {
                 page.setStatus("Error: " + err, true);

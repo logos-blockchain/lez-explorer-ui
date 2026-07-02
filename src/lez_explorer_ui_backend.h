@@ -40,6 +40,7 @@ public:
 
     // .rep SLOTs.
     bool applyConfigJson(QString json) override;
+    bool resetIndexerCache() override;
     void refreshBlocks() override;
     void loadMoreBlocks() override;
     QVariantMap getBlockById(QString id) override;
