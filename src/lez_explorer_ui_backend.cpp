@@ -34,15 +34,14 @@ namespace {
         switch (code) {
         case 2: // OperationStatus::InitializationError
             return QStringLiteral(
-                "Indexer failed to initialize (InitializationError). This is usually a "
-                "storage problem — the data directory is locked by another running "
-                "indexer, or isn't writable — or an invalid config field. It is not "
-                "necessarily the JSON you just edited."
+                "Indexer failed to initialize: This is usually a "
+                "storage problem. The data directory is locked by another running "
+                "indexer / isn't writable, or there is an invalid config field."
             );
         case 3: // OperationStatus::ClientError
             return QStringLiteral(
-                "Indexer client error (ClientError) while starting — check the bedrock "
-                "node address in the config and that the node is reachable."
+                "Indexer client error while starting: check the bedrock "
+                "node address in the config and ensure the node is reachable."
             );
         case 1: // OperationStatus::NullPointer
             return QStringLiteral("Indexer failed to start (NullPointer).");
