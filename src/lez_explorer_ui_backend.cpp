@@ -399,6 +399,24 @@ bool LezExplorerUiBackend::applyConfigJson(QString json) {
     return ok;
 }
 
+bool LezExplorerUiBackend::resetIndexerCache() {
+    // reset_storage stops the indexer and deletes its RocksDB store; then we
+    // restart from the saved config so it re-indexes the current chain from
+    // scratch. The recovery path for a store left stale against a reset chain.
+    const qlonglong code = modules().lez_indexer_module.reset_storage(configFilePath());
+    if (code != 0) {
+        emit error(QStringLiteral("Failed to delete the indexer cache (code %1).").arg(code));
+        return false;
+    }
+
+    // Store is empty now; re-baseline the poller and restart ingestion.
+    m_lastPolledTip = 0;
+    m_polledOnce = false;
+    const bool ok = startIndexerFromFile();
+    refreshBlocks();
+    return ok;
+}
+
 void LezExplorerUiBackend::refreshBlocks() {
     const QString json = modules().lez_indexer_module.getBlocks(QString(), QStringLiteral("10"));
     m_recentBlocks = parseBlockArrayJson(json);
