@@ -145,9 +145,9 @@ Item {
                 if (ok) {
                     page.setStatus("Saved. Indexer starting…", false);
                     page.explorer.goHome();
-                } else {
-                    page.setStatus("Save failed — check the config and try again.", true);
                 }
+                // On failure the backend emits error() with a specific reason
+                // (shown by onError above) — don't clobber it with a generic line.
             },
             function (err) {
                 page.setStatus("Error: " + err, true);

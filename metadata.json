@@ -1,10 +1,11 @@
 {
   "name": "lez_explorer_ui",
+  "display_name": "LEZ Explorer",
   "version": "1.0.0",
   "type": "ui_qml",
   "interface": "universal",
   "category": "explorer",
-  "description": "LEZ Explorer UI - A block explorer for the Logos Execution Zone",
+  "description": "Logos Execution Zone Block Explorer",
   "main": "lez_explorer_ui_plugin",
   "icon": "src/qml/icons/box.svg",
   "view": "qml/Main.qml",
