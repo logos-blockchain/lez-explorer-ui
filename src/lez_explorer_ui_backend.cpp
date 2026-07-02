@@ -141,49 +141,14 @@ namespace {
         return true;
     }
 
-    // Base58-encode raw bytes (plain Bitcoin alphabet). Inverse of base58Decode.
-    QString bytes32ToBase58(const QByteArray& data) {
-        int leadingZeros = 0;
-        while (leadingZeros < data.size() && data[leadingZeros] == '\0') {
-            ++leadingZeros;
-        }
-        QByteArray digits; // base-58, least-significant first
-        for (int i = 0; i < data.size(); ++i) {
-            int carry = static_cast<unsigned char>(data[i]);
-            for (int j = 0; j < digits.size(); ++j) {
-                carry += static_cast<unsigned char>(digits[j]) * 256;
-                digits[j] = static_cast<char>(carry % 58);
-                carry /= 58;
-            }
-            while (carry > 0) {
-                digits.append(static_cast<char>(carry % 58));
-                carry /= 58;
-            }
-        }
-        QString out(leadingZeros, QLatin1Char('1'));
-        for (int i = digits.size(); i-- > 0;) {
-            out.append(QLatin1Char(kBase58Alphabet[static_cast<unsigned char>(digits[i])]));
-        }
-        return out;
-    }
-
-    // Canonical Base58 form of an account-id query, or "" if not account-shaped.
-    // Accepts Base58 (must decode to 32 bytes) or 64-char hex (optionally 0x): a
-    // hex search is normalised to Base58 so the result is displayed in canonical
-    // form.
-    QString canonicalAccountId(const QString& query) {
+    // The account id if `query` is one, else "". Accounts are Base58 with a 32-byte
+    // payload — a 64-hex string is a block/tx hash, not an account (matches the web
+    // explorer's AccountId::from_str, which is Base58-only with no hex fallback).
+    QString accountIdOrEmpty(const QString& query) {
         const QString trimmed = query.trimmed();
         QByteArray decoded;
         if (base58Decode(trimmed, decoded) && decoded.size() == 32) {
             return trimmed;
-        }
-        QString hex = trimmed;
-        if (hex.startsWith(QStringLiteral("0x"), Qt::CaseInsensitive)) {
-            hex = hex.mid(2);
-        }
-        static const QRegularExpression hexRe(QStringLiteral("^[0-9a-fA-F]{64}$"));
-        if (hexRe.match(hex).hasMatch()) {
-            return bytes32ToBase58(QByteArray::fromHex(hex.toLatin1()));
         }
         return {};
     }
@@ -523,10 +488,10 @@ QVariantMap LezExplorerUiBackend::search(QString query) {
             }
         }
 
-        // Account ids are Base58 (canonical) or 64-char hex; query and display by
-        // the canonical Base58 form. getAccount injects the id, so a payload with
-        // only that one field means "not found".
-        const QString accountId = canonicalAccountId(trimmed);
+        // Account ids are Base58 only (a hex string is a block/tx hash, not an
+        // account). getAccount injects the id, so a payload with only that one
+        // field means "not found".
+        const QString accountId = accountIdOrEmpty(trimmed);
         if (!accountId.isEmpty()) {
             const QVariantMap account = getAccount(accountId);
             if (account.size() > 1) {
