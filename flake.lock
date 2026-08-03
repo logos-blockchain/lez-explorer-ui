@@ -154,11 +154,11 @@
         "logos-module-builder": "logos-module-builder_4"
       },
       "locked": {
-        "lastModified": 1783003719,
-        "narHash": "sha256-SxNuNlv+chXZhdZUcd9CF6k+Eajgb2vpTaAoe0pGyCw=",
+        "lastModified": 1785750480,
+        "narHash": "sha256-qpR8cIqRhm6JCku32J8HUFb0FT11lWIPcFtSwrSBrQE=",
         "ref": "main",
-        "rev": "62c1af660f5b2b57fe4fa0e7feb5ba3cd650c307",
-        "revCount": 65,
+        "rev": "f591c3ce04caa267afd15cb52926c8200460ca81",
+        "revCount": 68,
         "type": "git",
         "url": "https://github.com/logos-blockchain/lez-indexer-module"
       },
@@ -3391,18 +3391,18 @@
         "rust-rapidsnark": "rust-rapidsnark"
       },
       "locked": {
-        "lastModified": 1782941647,
-        "narHash": "sha256-H7T0mBWY75tZjCf9zcQUAFteurZhqnZ+2srtdPeQTRQ=",
-        "ref": "main",
-        "rev": "d1637b65e2479e80bb617b900ec5d4024216457d",
-        "revCount": 2830,
-        "type": "git",
-        "url": "https://github.com/logos-blockchain/logos-execution-zone"
+        "lastModified": 1785659324,
+        "narHash": "sha256-xtC9Qksgp3f3ZEDdhLuM0DegelFl4EW20jqSmhqHeHQ=",
+        "owner": "logos-blockchain",
+        "repo": "logos-execution-zone",
+        "rev": "15144ddb8437f48cdce32908e122dbb7eea68399",
+        "type": "github"
       },
       "original": {
-        "ref": "main",
-        "type": "git",
-        "url": "https://github.com/logos-blockchain/logos-execution-zone"
+        "owner": "logos-blockchain",
+        "ref": "v0.2.1",
+        "repo": "logos-execution-zone",
+        "type": "github"
       }
     },
     "logos-liblogos": {

@@ -1,7 +1,7 @@
 {
   "name": "lez_explorer_ui",
   "display_name": "LEZ Explorer",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "type": "ui_qml",
   "interface": "universal",
   "category": "explorer",
