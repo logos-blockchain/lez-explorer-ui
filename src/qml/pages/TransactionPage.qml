@@ -73,21 +73,12 @@ Item {
                     value: String(page.tx.signatureCount !== undefined ? page.tx.signatureCount : 0)
                 }
 
-                // Privacy-preserving.
+                // Privacy-preserving. Each private action bundles a nullifier,
+                // root, commitment and encrypted post-state.
                 InfoRow {
                     visible: page.txType === "PrivacyPreserving"
-                    label: "New Commitments"
-                    value: String(page.tx.newCommitmentsCount !== undefined ? page.tx.newCommitmentsCount : 0)
-                }
-                InfoRow {
-                    visible: page.txType === "PrivacyPreserving"
-                    label: "Nullifiers"
-                    value: String(page.tx.nullifiersCount !== undefined ? page.tx.nullifiersCount : 0)
-                }
-                InfoRow {
-                    visible: page.txType === "PrivacyPreserving"
-                    label: "Encrypted States"
-                    value: String(page.tx.encryptedStatesCount !== undefined ? page.tx.encryptedStatesCount : 0)
+                    label: "Private Actions"
+                    value: String(page.tx.privateActionsCount !== undefined ? page.tx.privateActionsCount : 0)
                 }
                 InfoRow {
                     visible: page.txType === "PrivacyPreserving"

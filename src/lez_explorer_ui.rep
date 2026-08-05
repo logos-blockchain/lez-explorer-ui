@@ -13,13 +13,14 @@ class LezExplorerUi
     // Recent-blocks feed shown on the home page (newest first). Backend-owned:
     // the 2 s poll prepends new heads and "Load more" appends older pages.
     PROP(QVariantList recentBlocks READONLY)
-    // Tip block id (from the indexer status' indexedBlockId).
+    // Tip block id (from the indexer status' indexed_block_id).
     PROP(qlonglong chainHeight=0 READONLY)
     // "Connecting" / "Connected" / "Error" — drives the health indicator.
     PROP(QString connectionStatus READONLY)
     // Ingestion status for the first-launch/sync banner, refreshed by the tip
-    // poll. Map of { state: "starting"|"syncing"|"caught_up"|"error",
-    // blockId: qulonglong, error: QString }. Lets the view show the current
+    // poll. Map of { state: "Stopped"|"Starting"|"Syncing"|"CaughtUp"|"Error"|
+    // "Stalled" (core `IndexerSyncState` names verbatim, plus the UI-only
+    // "Stopped"), blockId: qulonglong, error: QString }. Lets the view show the current
     // phase (or the error) so "catching up" reads differently from "failed".
     PROP(QVariantMap syncStatus READONLY)
     // The indexer config JSON currently in effect ("" until one is saved). The

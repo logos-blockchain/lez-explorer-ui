@@ -1,5 +1,7 @@
 #include "lez_explorer_ui_backend.h"
 
+#include "sync_status.h"
+
 #include <algorithm>
 #include <utility>
 
@@ -62,7 +64,8 @@ namespace {
             "max_retries": 5
         }
     },
-    "channel_id": "0101010101010101010101010101010101010101010101010101010101010101"
+    "channel_id": "8301010101010101010101010101010101010101010101010101010101010101",
+    "allow_chain_reset": true
 })JSON";
 
     // 64/128-bit values arrive as decimal strings (to dodge JSON double precision
@@ -198,12 +201,10 @@ namespace {
             tx.insert(QStringLiteral("signatureCount"), obj.value(QStringLiteral("signature_count")).toInt());
         } else if (type == QLatin1String("PrivacyPreserving")) {
             tx.insert(QStringLiteral("accounts"), accountsOf(obj.value(QStringLiteral("accounts")).toArray()));
+            // One private action = nullifier + root + commitment + encrypted
+            // post-state, so a single count replaced the former per-list ones.
             tx.insert(
-                QStringLiteral("newCommitmentsCount"), obj.value(QStringLiteral("new_commitments_count")).toInt()
-            );
-            tx.insert(QStringLiteral("nullifiersCount"), obj.value(QStringLiteral("nullifiers_count")).toInt());
-            tx.insert(
-                QStringLiteral("encryptedStatesCount"), obj.value(QStringLiteral("encrypted_states_count")).toInt()
+                QStringLiteral("privateActionsCount"), obj.value(QStringLiteral("private_actions_count")).toInt()
             );
             tx.insert(
                 QStringLiteral("validityWindowStart"),
@@ -521,39 +522,26 @@ QVariantMap LezExplorerUiBackend::search(QString query) {
 }
 
 quint64 LezExplorerUiBackend::applySyncStatus(const QString& json) {
-    // Empty JSON means the indexer isn't running (not configured / not started);
-    // a real status always carries one of the core's states.
-    QString state = QStringLiteral("stopped");
-    quint64 blockId = 0;
-    QString errorMsg;
-
-    if (!json.isEmpty()) {
-        QJsonParseError parseError;
-        const QJsonDocument doc = QJsonDocument::fromJson(json.toUtf8(), &parseError);
-        if (parseError.error == QJsonParseError::NoError && doc.isObject()) {
-            const QJsonObject obj = doc.object();
-            state = obj.value(QStringLiteral("state")).toString(QStringLiteral("starting"));
-            blockId = static_cast<quint64>(obj.value(QStringLiteral("indexedBlockId")).toDouble(0));
-            errorMsg = obj.value(QStringLiteral("lastError")).toString();
-        }
-    }
+    const SyncStatus parsed = parseSyncStatus(json);
 
     QVariantMap status;
-    status.insert(QStringLiteral("state"), state);
-    status.insert(QStringLiteral("blockId"), static_cast<qulonglong>(blockId));
-    status.insert(QStringLiteral("error"), errorMsg);
+    status.insert(QStringLiteral("state"), parsed.state);
+    status.insert(QStringLiteral("blockId"), static_cast<qulonglong>(parsed.blockId));
+    status.insert(QStringLiteral("error"), parsed.error);
     setSyncStatus(status);
 
-    // Keep the legacy health indicator in step with the richer status.
-    if (state == QLatin1String("error")) {
+    // Keep the legacy health indicator in step with the richer status. Stalled
+    // means ingestion is parked on a bad block — unhealthy, even though the L1
+    // connection itself is fine.
+    if (parsed.state == QLatin1String("Error") || parsed.state == QLatin1String("Stalled")) {
         setConnectionStatus(QStringLiteral("Error"));
-    } else if (state == QLatin1String("syncing") || state == QLatin1String("caught_up")) {
+    } else if (parsed.state == QLatin1String("Syncing") || parsed.state == QLatin1String("CaughtUp")) {
         setConnectionStatus(QStringLiteral("Connected"));
     } else {
         setConnectionStatus(QStringLiteral("Connecting"));
     }
 
-    return blockId;
+    return parsed.blockId;
 }
 
 void LezExplorerUiBackend::pollTip() {
