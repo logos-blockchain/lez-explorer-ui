@@ -8,6 +8,10 @@ Rectangle {
     property url source
     property bool enabled: true
     property int size: 40
+    // Accessible/testable label — not rendered (the button is icon-only by
+    // design); exposes a `text` property so UI tests and assistive tech can
+    // identify the button by name instead of by icon asset.
+    property string text: ""
     signal clicked()
 
     implicitWidth: size
@@ -17,6 +21,9 @@ Rectangle {
     color: hover.hovered && root.enabled ? Theme.palette.backgroundSecondary : Theme.palette.backgroundElevated
     border.width: 1
     border.color: Theme.palette.borderSecondary
+
+    Accessible.role: Accessible.Button
+    Accessible.name: root.text
 
     HoverHandler { id: hover; enabled: root.enabled }
     TapHandler { enabled: root.enabled; onTapped: root.clicked() }

@@ -154,16 +154,16 @@
         "logos-module-builder": "logos-module-builder_4"
       },
       "locked": {
-        "lastModified": 1785922407,
-        "narHash": "sha256-ZASHE7sQ2VRmN3G2qKwKPdMPwlBDwGtEy1XFw5loe38=",
-        "ref": "erhant/indexer-fix-bc0.2.3",
-        "rev": "6c89162e8bb50308aa5e54abddc2aa39396788ba",
-        "revCount": 69,
+        "lastModified": 1785931067,
+        "narHash": "sha256-0ClYQaBExj09zIKTYCdtsd+lGenOHAbWh5i+Ce9mHRw=",
+        "ref": "main",
+        "rev": "5033da442a7fde56121639859c96ebb347b75ba7",
+        "revCount": 73,
         "type": "git",
         "url": "https://github.com/logos-blockchain/lez-indexer-module"
       },
       "original": {
-        "ref": "erhant/indexer-fix-bc0.2.3",
+        "ref": "main",
         "type": "git",
         "url": "https://github.com/logos-blockchain/lez-indexer-module"
       }
@@ -3400,7 +3400,7 @@
       },
       "original": {
         "owner": "logos-blockchain",
-        "ref": "v0.2.2-rc1",
+        "ref": "v0.2.2",
         "repo": "logos-execution-zone",
         "type": "github"
       }

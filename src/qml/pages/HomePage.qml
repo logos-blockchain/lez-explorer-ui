@@ -17,6 +17,10 @@ Item {
     readonly property string syncState: (sync && sync.state) ? sync.state : "Starting"
     readonly property string syncError: (sync && sync.error) ? sync.error : ""
 
+    // A Stopped state with an error means auto-start failed (Task 1 injects
+    // the reason); plain Stopped means the indexer simply isn't running.
+    readonly property bool startFailed: syncState === "Stopped" && syncError !== ""
+
     // Human-readable line for the banner: the current phase (or the error), so
     // the user can tell catching-up from a real failure on first launch.
     function statusLine() {
@@ -33,7 +37,7 @@ Item {
         if (page.syncState === "Syncing")
             return "Syncing… · block " + height;
         if (page.syncState === "Stopped")
-            return "Indexer not running";
+            return page.startFailed ? "Indexer failed to start: " + page.syncError : "Indexer not running";
         return "Starting indexer…";
     }
 
@@ -46,6 +50,9 @@ Item {
         if (page.syncState === "Stalled")
             return (page.syncError !== "" ? "Indexer stalled: " + page.syncError : "Indexer stalled on an invalid block.")
                  + "\nIndexed blocks up to the stall are still browsable.";
+        if (page.startFailed)
+            return "Indexer failed to start: " + page.syncError
+                 + "\nOpen Settings to fix the configuration.";
         if (page.syncState === "Syncing" || page.syncState === "Starting")
             return "Indexer is syncing, please wait…";
         if (page.syncState === "CaughtUp")
@@ -70,13 +77,13 @@ Item {
                     height: 9
                     radius: 4.5
                     Layout.alignment: Qt.AlignVCenter
-                    color: page.syncState === "Error" || page.syncState === "Stalled" ? Theme.palette.error
+                    color: page.syncState === "Error" || page.syncState === "Stalled" || page.startFailed ? Theme.palette.error
                          : page.syncState === "CaughtUp" ? Theme.palette.success
                          : Theme.palette.warning
                 }
                 LogosText {
                     text: page.statusLine()
-                    color: page.syncState === "Error" || page.syncState === "Stalled" ? Theme.palette.error : Theme.palette.textMuted
+                    color: page.syncState === "Error" || page.syncState === "Stalled" || page.startFailed ? Theme.palette.error : Theme.palette.textMuted
                     font.pixelSize: Theme.typography.secondaryText
                     Layout.alignment: Qt.AlignVCenter
                     Layout.fillWidth: true

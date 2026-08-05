@@ -19,15 +19,18 @@ RowLayout {
     IconButton {
         source: Qt.resolvedUrl("../icons/arrow-left.svg")
         enabled: root.canGoBack
+        text: "Back"
         onClicked: root.backClicked()
     }
     IconButton {
         source: Qt.resolvedUrl("../icons/arrow-right.svg")
         enabled: root.canGoForward
+        text: "Forward"
         onClicked: root.forwardClicked()
     }
     IconButton {
         source: Qt.resolvedUrl("../icons/home.svg")
+        text: "Home"
         onClicked: root.homeClicked()
     }
 
@@ -44,6 +47,7 @@ RowLayout {
 
     IconButton {
         source: Qt.resolvedUrl("../icons/settings.svg")
+        text: "Settings"
         onClicked: root.settingsClicked()
     }
 }
