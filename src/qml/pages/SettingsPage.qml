@@ -327,6 +327,23 @@ Item {
 
         var out = JSON.stringify(obj, null, 4);
 
+        // Edits that cancel out (or a Save with nothing touched) shouldn't
+        // bounce the indexer — compare semantically so formatting differences
+        // with the stored JSON don't force a restart.
+        var current = page.backend.configText;
+        if (current && current.length > 0) {
+            try {
+                if (JSON.stringify(JSON.parse(current)) === JSON.stringify(obj)) {
+                    page.seedEditor(out);
+                    page.setStatus("", false);
+                    page.explorer.goHome();
+                    return;
+                }
+            } catch (e) {
+                // Unparseable stored config — treat as changed and save normally.
+            }
+        }
+
         page.setStatus("Saving…", false);
         logos.watch(page.backend.applyConfigJson(out),
             function (ok) {
