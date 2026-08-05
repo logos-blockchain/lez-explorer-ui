@@ -70,6 +70,14 @@ private:
     bool startIndexerFromFile();
 
     QString m_configFilePath;
+    // Human message of the most recent failed start, cleared on a successful
+    // start. Injected into syncStatus while the indexer is stopped so the
+    // banner can say WHY instead of a neutral "not running".
+    QString m_lastStartError;
+    // Remaining pollTip re-attempts of the launch auto-start. The indexer
+    // module process can come up long after onContextReady, and a typed call
+    // made before it listens silently returns success without doing anything.
+    int m_autoStartRetriesLeft = 0;
     QVariantList m_recentBlocks;
     quint64 m_newestLoadedId = 0; // highest block id currently in m_recentBlocks
     quint64 m_oldestLoadedId = 0; // lowest block id currently in m_recentBlocks

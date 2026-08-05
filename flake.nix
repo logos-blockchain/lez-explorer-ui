@@ -4,7 +4,6 @@
   inputs = {
     logos-module-builder.url = "github:logos-co/logos-module-builder";
     nix-bundle-lgx.url = "github:logos-co/nix-bundle-lgx";
-    
     lez_indexer_module.url = "git+https://github.com/logos-blockchain/lez-indexer-module?ref=main";
   };
 

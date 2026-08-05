@@ -26,6 +26,7 @@ logos_module(
     SOURCES
         src/lez_explorer_ui_backend.h
         src/lez_explorer_ui_backend.cpp
+        src/sync_status.h
     INCLUDE_DIRS
         src
 )

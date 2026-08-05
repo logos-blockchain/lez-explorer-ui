@@ -1,5 +1,7 @@
 #include "lez_explorer_ui_backend.h"
 
+#include "sync_status.h"
+
 #include <algorithm>
 #include <utility>
 
@@ -25,6 +27,10 @@
 namespace {
 
     constexpr int kPollIntervalMs = 2000;
+    // The indexer module process can come up well after our onContextReady
+    // (tens of seconds), and a typed call made before it listens silently
+    // returns 0 — so the launch auto-start re-attempts on this many polls.
+    constexpr int kAutoStartRetries = 45;
     // Above this gap we rebuild the feed from the backend rather than fetch every
     // missing block one by one (matches the former LpIndexerService threshold).
     constexpr quint64 kGapRebuildThreshold = 8;
@@ -56,13 +62,10 @@ namespace {
     const char* const kDefaultConfig = R"JSON({
     "consensus_info_polling_interval": "1s",
     "bedrock_config": {
-        "addr": "http://localhost:8080",
-        "backoff": {
-            "start_delay": "100ms",
-            "max_retries": 5
-        }
+        "addr": "http://localhost:8080"
     },
-    "channel_id": "0101010101010101010101010101010101010101010101010101010101010101"
+    "channel_id": "8301010101010101010101010101010101010101010101010101010101010101",
+    "allow_chain_reset": true
 })JSON";
 
     // 64/128-bit values arrive as decimal strings (to dodge JSON double precision
@@ -198,12 +201,10 @@ namespace {
             tx.insert(QStringLiteral("signatureCount"), obj.value(QStringLiteral("signature_count")).toInt());
         } else if (type == QLatin1String("PrivacyPreserving")) {
             tx.insert(QStringLiteral("accounts"), accountsOf(obj.value(QStringLiteral("accounts")).toArray()));
+            // One private action = nullifier + root + commitment + encrypted
+            // post-state, so a single count replaced the former per-list ones.
             tx.insert(
-                QStringLiteral("newCommitmentsCount"), obj.value(QStringLiteral("new_commitments_count")).toInt()
-            );
-            tx.insert(QStringLiteral("nullifiersCount"), obj.value(QStringLiteral("nullifiers_count")).toInt());
-            tx.insert(
-                QStringLiteral("encryptedStatesCount"), obj.value(QStringLiteral("encrypted_states_count")).toInt()
+                QStringLiteral("privateActionsCount"), obj.value(QStringLiteral("private_actions_count")).toInt()
             );
             tx.insert(
                 QStringLiteral("validityWindowStart"),
@@ -306,10 +307,19 @@ LezExplorerUiBackend::~LezExplorerUiBackend() {
 void LezExplorerUiBackend::onContextReady() {
     setConnectionStatus(QStringLiteral("Connecting"));
 
-    // Reload + auto-start the previously-saved config, if any (set-once UX).
-    const QString saved = readConfigFile();
-    if (!saved.isEmpty()) {
+    // Reload the previously-saved config — or, on first launch, seed the
+    // built-in default so the indexer starts without a Settings visit — and
+    // auto-start (set-once UX).
+    QString saved = readConfigFile();
+    if (saved.trimmed().isEmpty() && writeConfigFile(defaultConfig())) {
+        saved = defaultConfig();
+    }
+    if (!saved.trimmed().isEmpty()) {
         setConfigText(saved);
+        // This first attempt races the indexer module's own startup: the call
+        // no-ops (returns 0) if the module isn't listening yet. pollTip keeps
+        // retrying while the status stays silent.
+        m_autoStartRetriesLeft = kAutoStartRetries;
         startIndexerFromFile();
     }
 
@@ -521,45 +531,60 @@ QVariantMap LezExplorerUiBackend::search(QString query) {
 }
 
 quint64 LezExplorerUiBackend::applySyncStatus(const QString& json) {
-    // Empty JSON means the indexer isn't running (not configured / not started);
-    // a real status always carries one of the core's states.
-    QString state = QStringLiteral("stopped");
-    quint64 blockId = 0;
-    QString errorMsg;
+    const SyncStatus parsed = parseSyncStatus(json);
 
-    if (!json.isEmpty()) {
-        QJsonParseError parseError;
-        const QJsonDocument doc = QJsonDocument::fromJson(json.toUtf8(), &parseError);
-        if (parseError.error == QJsonParseError::NoError && doc.isObject()) {
-            const QJsonObject obj = doc.object();
-            state = obj.value(QStringLiteral("state")).toString(QStringLiteral("starting"));
-            blockId = static_cast<quint64>(obj.value(QStringLiteral("indexedBlockId")).toDouble(0));
-            errorMsg = obj.value(QStringLiteral("lastError")).toString();
-        }
+    // A failed start leaves getStatus empty => "Stopped", which would lose the
+    // reason — carry the remembered start error into the banner's status.
+    QString errorMsg = parsed.error;
+    if (parsed.state == QLatin1String("Stopped") && !m_lastStartError.isEmpty()) {
+        errorMsg = m_lastStartError;
+    }
+
+    // While the launch auto-start is still retrying against a booting module,
+    // an empty status is expected — present it as booting, not "not running".
+    QString shownState = parsed.state;
+    if (parsed.state == QLatin1String("Stopped") && m_autoStartRetriesLeft > 0 && errorMsg.isEmpty()) {
+        shownState = QStringLiteral("Starting");
     }
 
     QVariantMap status;
-    status.insert(QStringLiteral("state"), state);
-    status.insert(QStringLiteral("blockId"), static_cast<qulonglong>(blockId));
+    status.insert(QStringLiteral("state"), shownState);
+    status.insert(QStringLiteral("blockId"), static_cast<qulonglong>(parsed.blockId));
     status.insert(QStringLiteral("error"), errorMsg);
     setSyncStatus(status);
 
-    // Keep the legacy health indicator in step with the richer status.
-    if (state == QLatin1String("error")) {
+    // Keep the legacy health indicator in step with the richer status. Stalled
+    // means ingestion is parked on a bad block — unhealthy, even though the L1
+    // connection itself is fine.
+    if (parsed.state == QLatin1String("Error") || parsed.state == QLatin1String("Stalled")) {
         setConnectionStatus(QStringLiteral("Error"));
-    } else if (state == QLatin1String("syncing") || state == QLatin1String("caught_up")) {
+    } else if (parsed.state == QLatin1String("Syncing") || parsed.state == QLatin1String("CaughtUp")) {
         setConnectionStatus(QStringLiteral("Connected"));
     } else {
         setConnectionStatus(QStringLiteral("Connecting"));
     }
 
-    return blockId;
+    return parsed.blockId;
 }
 
 void LezExplorerUiBackend::pollTip() {
     // One status call drives both the sync banner and the feed: indexedBlockId
     // is the L2 tip we page from.
-    const quint64 tip = applySyncStatus(modules().lez_indexer_module.getStatus());
+    const QString statusJson = modules().lez_indexer_module.getStatus();
+    const quint64 tip = applySyncStatus(statusJson);
+
+    // Launch auto-start retry: an empty status means no indexer is running —
+    // either the module was still booting when onContextReady's start call
+    // fired (the typed call silently no-ops then) or the start failed. Retry
+    // until the module answers; a real module-side failure (non-zero start
+    // code) already put its reason on the banner, so stop retrying then.
+    if (m_autoStartRetriesLeft > 0) {
+        if (!statusJson.isEmpty()) {
+            m_autoStartRetriesLeft = 0;
+        } else if (--m_autoStartRetriesLeft > 0 && !startIndexerFromFile()) {
+            m_autoStartRetriesLeft = 0;
+        }
+    }
     if (tip == 0) {
         // No finalized block yet (starting / syncing from genesis, or stopped);
         // syncStatus already conveys which, so just wait for the next poll.
@@ -683,8 +708,10 @@ bool LezExplorerUiBackend::startIndexerFromFile() {
     modules().lez_indexer_module.stop_indexer();
     const qlonglong code = modules().lez_indexer_module.start_indexer(configFilePath());
     if (code != 0) {
-        emit error(startErrorMessage(code));
+        m_lastStartError = startErrorMessage(code);
+        emit error(m_lastStartError);
         return false;
     }
+    m_lastStartError.clear();
     return true;
 }
