@@ -33,7 +33,8 @@ Item {
             return "Indexer stalled" + (page.syncError !== "" ? ": " + page.syncError : "")
                  + " · block " + height;
         if (page.syncState === "CaughtUp")
-            return "Up to date · block " + height;
+            return backend.chainHeight > 0 ? "Up to date · block " + height
+                                           : "Up to date · no blocks indexed";
         if (page.syncState === "Syncing")
             return "Syncing… · block " + height;
         if (page.syncState === "Stopped")
