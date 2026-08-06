@@ -56,6 +56,12 @@ private:
     // Parse the indexer's status JSON, publish the `syncStatus` PROP + the
     // legacy `connectionStatus`, and return the indexed tip (0 if none yet).
     quint64 applySyncStatus(const QString& json);
+    // Forget everything derived from the previously indexed chain (published
+    // height + poll baseline). Called whenever the indexer is (re)started, since
+    // it may come back on a different channel or an emptied store.
+    void resetPollBaseline();
+    // Drop the recent-blocks feed and its paging bounds.
+    void clearBlockFeed();
     // Fetch a single block as a normalized map ({} if missing).
     QVariantMap fetchBlock(quint64 blockId);
     // Parse a getBlocks(...) JSON array payload into a list of block maps.

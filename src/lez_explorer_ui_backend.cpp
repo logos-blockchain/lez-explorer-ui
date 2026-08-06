@@ -64,7 +64,7 @@ namespace {
     "bedrock_config": {
         "addr": "http://localhost:8080"
     },
-    "channel_id": "8301010101010101010101010101010101010101010101010101010101010101",
+    "channel_id": "0101010101010101010101010101010101010101010101010101010101010101",
     "allow_chain_reset": true
 })JSON";
 
@@ -366,9 +366,10 @@ bool LezExplorerUiBackend::applyConfigJson(QString json) {
 
     const bool ok = startIndexerFromFile();
 
-    // Re-baseline the poller; a (re)started indexer may ingest afresh.
-    m_lastPolledTip = 0;
-    m_polledOnce = false;
+    // Re-baseline the poller; a (re)started indexer may ingest afresh — and the
+    // edit may have pointed it at a different channel, whose store is separate
+    // and possibly empty.
+    resetPollBaseline();
     refreshBlocks();
     return ok;
 }
@@ -392,8 +393,7 @@ bool LezExplorerUiBackend::resetIndexerCache() {
     }
 
     // Store is empty now; re-baseline the poller and restart ingestion.
-    m_lastPolledTip = 0;
-    m_polledOnce = false;
+    resetPollBaseline();
     const bool ok = startIndexerFromFile();
     refreshBlocks();
     return ok;
@@ -585,13 +585,24 @@ void LezExplorerUiBackend::pollTip() {
             m_autoStartRetriesLeft = 0;
         }
     }
+    // Publish the tip on every poll, including 0. The indexer namespaces its
+    // store per channel, so pointing it at a different channel reports "nothing
+    // indexed" — keeping the previous channel's height published would leave the
+    // banner claiming a block the indexer no longer has.
+    setChainHeight(static_cast<qlonglong>(tip));
+
     if (tip == 0) {
         // No finalized block yet (starting / syncing from genesis, or stopped);
-        // syncStatus already conveys which, so just wait for the next poll.
+        // syncStatus already conveys which. Drop any feed left over from the
+        // chain we were indexing before, so the list agrees with the height we
+        // just published, and re-baseline so the next block refills it.
+        if (m_polledOnce || !m_recentBlocks.isEmpty()) {
+            m_lastPolledTip = 0;
+            m_polledOnce = false;
+            clearBlockFeed();
+        }
         return;
     }
-
-    setChainHeight(static_cast<qlonglong>(tip));
 
     // First successful poll: fill the feed and baseline without double-loading.
     if (!m_polledOnce) {
@@ -601,7 +612,17 @@ void LezExplorerUiBackend::pollTip() {
         return;
     }
 
-    if (tip <= m_lastPolledTip) {
+    if (tip == m_lastPolledTip) {
+        return;
+    }
+
+    // Tip moved backwards: the store was wiped and re-indexed under us (chain
+    // reset, or a restart onto another channel that we didn't drive). Rebuild
+    // rather than wait for the new chain to grow past the old tip, which would
+    // leave the feed showing blocks that no longer exist.
+    if (tip < m_lastPolledTip) {
+        m_lastPolledTip = tip;
+        refreshBlocks();
         return;
     }
 
@@ -626,6 +647,22 @@ void LezExplorerUiBackend::pollTip() {
         }
     }
     m_lastPolledTip = tip;
+    setRecentBlocks(m_recentBlocks);
+}
+
+void LezExplorerUiBackend::resetPollBaseline() {
+    m_lastPolledTip = 0;
+    m_polledOnce = false;
+    // The height is published, so it must be dropped here too — otherwise the
+    // previous chain's tip stays on the banner until (and unless) a poll on the
+    // new chain overwrites it.
+    setChainHeight(0);
+}
+
+void LezExplorerUiBackend::clearBlockFeed() {
+    m_recentBlocks.clear();
+    m_newestLoadedId = 0;
+    m_oldestLoadedId = 0;
     setRecentBlocks(m_recentBlocks);
 }
 
