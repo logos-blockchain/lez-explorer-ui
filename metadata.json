@@ -7,7 +7,7 @@
   "category": "explorer",
   "description": "Logos Execution Zone Block Explorer",
   "main": "lez_explorer_ui_plugin",
-  "icon": "src/qml/icons/box.svg",
+  "icon": "src/icons/lez_explorer.png",
   "view": "qml/Main.qml",
   "dependencies": ["lez_indexer_module"],
   "codegen": { "rep": "src/lez_explorer_ui.rep" },
