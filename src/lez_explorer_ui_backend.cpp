@@ -195,10 +195,19 @@ namespace {
         if (type == QLatin1String("Public")) {
             tx.insert(QStringLiteral("programId"), jsonStr(obj.value(QStringLiteral("program_id"))));
             tx.insert(QStringLiteral("accounts"), accountsOf(obj.value(QStringLiteral("accounts")).toArray()));
-            tx.insert(
-                QStringLiteral("instructionDataCount"), obj.value(QStringLiteral("instruction_data")).toArray().size()
-            );
+            tx.insert(QStringLiteral("instructionData"), jsonStr(obj.value(QStringLiteral("instruction_data"))));
             tx.insert(QStringLiteral("signatureCount"), obj.value(QStringLiteral("signature_count")).toInt());
+            // Declared fee caps (null for fee-exempt/system txs); omitted when absent.
+            const QJsonValue feeValue = obj.value(QStringLiteral("fee"));
+            if (feeValue.isObject()) {
+                const QJsonObject feeObj = feeValue.toObject();
+                QVariantMap fee;
+                fee.insert(QStringLiteral("payer"), jsonStr(feeObj.value(QStringLiteral("payer"))));
+                fee.insert(QStringLiteral("gasLimit"), jsonStr(feeObj.value(QStringLiteral("gas_limit"))));
+                fee.insert(QStringLiteral("tip"), jsonStr(feeObj.value(QStringLiteral("tip"))));
+                fee.insert(QStringLiteral("maxFee"), jsonStr(feeObj.value(QStringLiteral("max_fee"))));
+                tx.insert(QStringLiteral("fee"), fee);
+            }
         } else if (type == QLatin1String("PrivacyPreserving")) {
             tx.insert(QStringLiteral("accounts"), accountsOf(obj.value(QStringLiteral("accounts")).toArray()));
             // One private action = nullifier + root + commitment + encrypted
