@@ -154,16 +154,16 @@
         "logos-module-builder": "logos-module-builder_4"
       },
       "locked": {
-        "lastModified": 1785931067,
-        "narHash": "sha256-0ClYQaBExj09zIKTYCdtsd+lGenOHAbWh5i+Ce9mHRw=",
-        "ref": "main",
-        "rev": "5033da442a7fde56121639859c96ebb347b75ba7",
-        "revCount": 73,
+        "lastModified": 1788432113,
+        "narHash": "sha256-5Ydtar/6GSzz0ltPIDDpIcEw+NHLp1B5htRKmPArpho=",
+        "ref": "erhant/fees-updates",
+        "rev": "723293c742c1b630237da390faef1cf7e3a20e2a",
+        "revCount": 76,
         "type": "git",
         "url": "https://github.com/logos-blockchain/lez-indexer-module"
       },
       "original": {
-        "ref": "main",
+        "ref": "erhant/fees-updates",
         "type": "git",
         "url": "https://github.com/logos-blockchain/lez-indexer-module"
       }
@@ -3391,17 +3391,17 @@
         "rust-rapidsnark": "rust-rapidsnark"
       },
       "locked": {
-        "lastModified": 1785854842,
-        "narHash": "sha256-4Q0vnbnYJwxx3gWTtlt5ozTud4yj5CmxvXoHmdcmoB0=",
+        "lastModified": 1788420414,
+        "narHash": "sha256-2Hp+qCNXaPi6ewWot7Q76rsZJ4Mk1qt7zQSFyYckiNo=",
         "owner": "logos-blockchain",
         "repo": "logos-execution-zone",
-        "rev": "d6e4ae694e7419f5906b340c232704466a1917b7",
+        "rev": "b3283d38c367b40e7fe6ac6ce72ed485604a9e31",
         "type": "github"
       },
       "original": {
         "owner": "logos-blockchain",
-        "ref": "v0.2.2",
         "repo": "logos-execution-zone",
+        "rev": "b3283d38c367b40e7fe6ac6ce72ed485604a9e31",
         "type": "github"
       }
     },
