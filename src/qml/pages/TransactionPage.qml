@@ -65,7 +65,9 @@ Item {
                 InfoRow {
                     visible: page.txType === "Public"
                     label: "Instruction Data"
-                    value: (page.tx.instructionDataCount !== undefined ? page.tx.instructionDataCount : 0) + " words"
+                    value: page.tx.instructionData ? page.tx.instructionData : "(empty)"
+                    mono: !!page.tx.instructionData
+                    copyable: !!page.tx.instructionData
                 }
                 InfoRow {
                     visible: page.txType === "Public" || page.txType === "PrivacyPreserving"
@@ -97,6 +99,40 @@ Item {
                     visible: page.txType === "ProgramDeployment"
                     label: "Bytecode Size"
                     value: (page.tx.bytecodeSizeBytes !== undefined ? page.tx.bytecodeSizeBytes : 0) + " bytes"
+                }
+            }
+
+            // Fee declaration (public txs only). These are the declared caps,
+            // not the amount actually charged; absent for fee-exempt/system txs.
+            SectionHeader {
+                visible: page.loaded && page.txType === "Public"
+                title: "Fee Declaration"
+            }
+            Card {
+                Layout.fillWidth: true
+                visible: page.loaded && page.txType === "Public"
+
+                LogosText {
+                    visible: page.tx.fee === undefined
+                    text: "Fee-exempt (system transaction)"
+                    color: Theme.palette.textMuted
+                    font.pixelSize: Theme.typography.secondaryText
+                }
+                InfoRow {
+                    visible: page.tx.fee !== undefined
+                    label: "Payer"; value: page.tx.fee ? page.tx.fee.payer : ""; mono: true; copyable: true
+                }
+                InfoRow {
+                    visible: page.tx.fee !== undefined
+                    label: "Gas Limit"; value: page.tx.fee ? page.tx.fee.gasLimit : ""
+                }
+                InfoRow {
+                    visible: page.tx.fee !== undefined
+                    label: "Tip"; value: page.tx.fee ? page.tx.fee.tip : ""
+                }
+                InfoRow {
+                    visible: page.tx.fee !== undefined
+                    label: "Max Fee"; value: page.tx.fee ? page.tx.fee.maxFee : ""
                 }
             }
 
