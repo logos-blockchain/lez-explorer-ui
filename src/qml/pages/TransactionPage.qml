@@ -93,13 +93,6 @@ Item {
                     value: "[" + (page.tx.validityWindowStart !== undefined ? page.tx.validityWindowStart : 0)
                            + ", " + (page.tx.validityWindowEnd !== undefined ? page.tx.validityWindowEnd : 0) + ")"
                 }
-
-                // Program deployment.
-                InfoRow {
-                    visible: page.txType === "ProgramDeployment"
-                    label: "Bytecode Size"
-                    value: (page.tx.bytecodeSizeBytes !== undefined ? page.tx.bytecodeSizeBytes : 0) + " bytes"
-                }
             }
 
             // Fee declaration (public txs only). These are the declared caps,

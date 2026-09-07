@@ -225,8 +225,6 @@ namespace {
             );
             tx.insert(QStringLiteral("signatureCount"), obj.value(QStringLiteral("signature_count")).toInt());
             tx.insert(QStringLiteral("proofSizeBytes"), obj.value(QStringLiteral("proof_size")).toInt());
-        } else if (type == QLatin1String("ProgramDeployment")) {
-            tx.insert(QStringLiteral("bytecodeSizeBytes"), obj.value(QStringLiteral("bytecode_size")).toInt());
         }
 
         return tx;
