@@ -154,11 +154,11 @@
         "logos-module-builder": "logos-module-builder_4"
       },
       "locked": {
-        "lastModified": 1785931067,
-        "narHash": "sha256-0ClYQaBExj09zIKTYCdtsd+lGenOHAbWh5i+Ce9mHRw=",
+        "lastModified": 1788801612,
+        "narHash": "sha256-cS4xvAlwjssqy3X+n0dafEoBE887hYBC+1XUrHFsfY8=",
         "ref": "main",
-        "rev": "5033da442a7fde56121639859c96ebb347b75ba7",
-        "revCount": 73,
+        "rev": "aeb96a11038ae3ed90f68550d53caf234433f2da",
+        "revCount": 77,
         "type": "git",
         "url": "https://github.com/logos-blockchain/lez-indexer-module"
       },
@@ -3391,16 +3391,16 @@
         "rust-rapidsnark": "rust-rapidsnark"
       },
       "locked": {
-        "lastModified": 1785854842,
-        "narHash": "sha256-4Q0vnbnYJwxx3gWTtlt5ozTud4yj5CmxvXoHmdcmoB0=",
+        "lastModified": 1788769902,
+        "narHash": "sha256-e8WCmxsmKAfc2ivw9QqOL1DsNQ0dzAs2Knsvr3el6dk=",
         "owner": "logos-blockchain",
         "repo": "logos-execution-zone",
-        "rev": "d6e4ae694e7419f5906b340c232704466a1917b7",
+        "rev": "74cc3e4824952b08bbe6e7f029e32e4b692810b9",
         "type": "github"
       },
       "original": {
         "owner": "logos-blockchain",
-        "ref": "v0.2.2",
+        "ref": "v0.2.5-rc1",
         "repo": "logos-execution-zone",
         "type": "github"
       }
