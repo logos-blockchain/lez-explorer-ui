@@ -12,7 +12,8 @@ Item {
     property var explorer
     readonly property var backend: explorer ? explorer.backend : null
 
-    // Ingestion status (from backend.syncStatus) drives the health/sync banner.
+    // Ingestion status (from backend.syncStatus). The status strip itself lives
+    // in Main — this is only what the empty state needs to word itself.
     readonly property var sync: backend ? backend.syncStatus : null
     readonly property string syncState: (sync && sync.state) ? sync.state : "Starting"
     readonly property string syncError: (sync && sync.error) ? sync.error : ""
@@ -21,30 +22,15 @@ Item {
     // the reason); plain Stopped means the indexer simply isn't running.
     readonly property bool startFailed: syncState === "Stopped" && syncError !== ""
 
-    // Human-readable line for the banner: the current phase (or the error), so
-    // the user can tell catching-up from a real failure on first launch.
-    function statusLine() {
-        if (!backend)
-            return "";
-        var height = backend.chainHeight > 0 ? backend.chainHeight : "—";
-        if (page.syncState === "Error")
-            return page.syncError !== "" ? page.syncError : "Indexer error";
-        if (page.syncState === "Stalled")
-            return "Indexer stalled" + (page.syncError !== "" ? ": " + page.syncError : "")
-                 + " · block " + height;
-        if (page.syncState === "CaughtUp")
-            return backend.chainHeight > 0 ? "Up to date · block " + height
-                                           : "Up to date · no blocks indexed";
-        if (page.syncState === "Syncing")
-            return "Syncing… · block " + height;
-        if (page.syncState === "Stopped")
-            return page.startFailed ? "Indexer failed to start: " + page.syncError : "Indexer not running";
-        return "Starting indexer…";
-    }
+    readonly property bool nodeUnreachable: page.explorer ? !!page.explorer.nodeUnreachable : false
 
     // Message for the empty block list, tailored to the current phase. Settings
     // lives only in the top-right gear, so we point there rather than add a button.
     function emptyStateText() {
+        // "Open Settings" is the wrong instruction when the config is fine and
+        // the node simply isn't up.
+        if (page.nodeUnreachable)
+            return "Waiting for the blockchain node.\nStart it and indexing resumes on its own.";
         if (page.syncState === "Error")
             return (page.syncError !== "" ? "Indexer error: " + page.syncError : "Indexer error.")
                  + "\nOpen Settings to reconfigure and restart.";
@@ -64,34 +50,6 @@ Item {
     ColumnLayout {
         anchors.fill: parent
         spacing: Theme.spacing.medium
-
-        // Health / sync bar.
-        Card {
-            Layout.fillWidth: true
-
-            RowLayout {
-                Layout.fillWidth: true
-                spacing: Theme.spacing.small
-
-                Rectangle {
-                    width: 9
-                    height: 9
-                    radius: 4.5
-                    Layout.alignment: Qt.AlignVCenter
-                    color: page.syncState === "Error" || page.syncState === "Stalled" || page.startFailed ? Theme.palette.error
-                         : page.syncState === "CaughtUp" ? Theme.palette.success
-                         : Theme.palette.warning
-                }
-                LogosText {
-                    text: page.statusLine()
-                    color: page.syncState === "Error" || page.syncState === "Stalled" || page.startFailed ? Theme.palette.error : Theme.palette.textMuted
-                    font.pixelSize: Theme.typography.secondaryText
-                    Layout.alignment: Qt.AlignVCenter
-                    Layout.fillWidth: true
-                    elide: Text.ElideRight
-                }
-            }
-        }
 
         SectionHeader { title: "Recent Blocks" }
 

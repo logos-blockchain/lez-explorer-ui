@@ -10,6 +10,9 @@
   "icon": "src/icons/lez_explorer.png",
   "view": "qml/Main.qml",
   "dependencies": ["lez_indexer_module"],
+  "uses": [
+    {"intent": "basecamp.apps.launch"}
+  ],
   "codegen": { "rep": "src/lez_explorer_ui.rep" },
   "nix": {
     "packages": {
