@@ -93,6 +93,33 @@ Rectangle {
         root.goHome();
     }
 
+    readonly property var syncStatus: root.backend ? root.backend.syncStatus : null
+    readonly property string syncError: (syncStatus && syncStatus.error) ? syncStatus.error : ""
+    readonly property string syncState: (syncStatus && syncStatus.state) ? syncStatus.state : ""
+    readonly property bool errorLooksUnreachable: {
+        var e = root.syncError.toLowerCase();
+        if (e === "")
+            return false;
+        return e.indexOf("error sending request") >= 0
+            || e.indexOf("connection refused") >= 0
+            || e.indexOf("cannot reach") >= 0
+            || e.indexOf("tcp connect error") >= 0
+            || e.indexOf("operation timed out") >= 0;
+    }
+
+    readonly property bool nodeUnreachable:
+        root.errorLooksUnreachable
+        && root.syncState !== "Syncing"
+        && root.syncState !== "CaughtUp"
+
+    // Raise whoever can manage the node.
+    function openBlockchainApp() {
+        if (typeof logos === "undefined" || typeof logos.request !== "function")
+            return;
+        logos.request("basecamp.apps.launch", { app: "blockchain_ui" },
+                      function (res) {});
+    }
+
     ColumnLayout {
         anchors.fill: parent
         anchors.margins: Theme.spacing.large
@@ -105,6 +132,14 @@ Rectangle {
             onForwardClicked: root.goForward()
             onHomeClicked: root.goHome()
             onSettingsClicked: root.navigateSettings()
+        }
+
+        IndexerStatusBar {
+            syncState: root.syncState
+            syncError: root.syncError
+            chainHeight: root.backend ? root.backend.chainHeight : 0
+            nodeUnreachable: root.nodeUnreachable
+            onOpenBlockchainAppRequested: root.openBlockchainApp()
         }
 
         SearchBar {
