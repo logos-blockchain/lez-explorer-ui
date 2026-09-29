@@ -60,7 +60,7 @@ Item {
                 // Public.
                 InfoRow {
                     visible: page.txType === "Public"
-                    label: "Program ID"; value: page.tx.programId || ""; mono: true; copyable: true
+                    label: "Program Account"; value: page.tx.programAccountId || ""; mono: true; copyable: true
                 }
                 InfoRow {
                     visible: page.txType === "Public"
