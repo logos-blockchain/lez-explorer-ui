@@ -185,6 +185,11 @@ namespace {
                 const QJsonObject account = entry.toObject();
                 QVariantMap ref;
                 ref.insert(QStringLiteral("accountId"), jsonStr(account.value(QStringLiteral("account_id"))));
+                // Public txs select a program shard per account; absent for private ones.
+                const QString programAccountId = jsonStr(account.value(QStringLiteral("program_account_id")));
+                if (!programAccountId.isEmpty()) {
+                    ref.insert(QStringLiteral("programAccountId"), programAccountId);
+                }
                 QString nonce = jsonStr(account.value(QStringLiteral("nonce")));
                 ref.insert(QStringLiteral("nonce"), nonce.isEmpty() ? QStringLiteral("0") : nonce);
                 accounts.append(ref);
@@ -193,7 +198,7 @@ namespace {
         };
 
         if (type == QLatin1String("Public")) {
-            tx.insert(QStringLiteral("programId"), jsonStr(obj.value(QStringLiteral("program_id"))));
+            tx.insert(QStringLiteral("programAccountId"), jsonStr(obj.value(QStringLiteral("program_account_id"))));
             tx.insert(QStringLiteral("accounts"), accountsOf(obj.value(QStringLiteral("accounts")).toArray()));
             tx.insert(QStringLiteral("instructionData"), jsonStr(obj.value(QStringLiteral("instruction_data"))));
             tx.insert(QStringLiteral("signatureCount"), obj.value(QStringLiteral("signature_count")).toInt());
@@ -281,12 +286,29 @@ namespace {
         QVariantMap account;
         account.insert(QStringLiteral("accountId"),
                        accountId); // payload omits it; inject the queried id
-        account.insert(QStringLiteral("programOwner"), jsonStr(obj.value(QStringLiteral("program_owner"))));
-        QString balance = jsonStr(obj.value(QStringLiteral("balance")));
-        account.insert(QStringLiteral("balance"), balance.isEmpty() ? QStringLiteral("0") : balance);
+        // Native balance; null means the native shard holds an invalid encoding.
+        const QJsonValue balanceValue = obj.value(QStringLiteral("balance"));
+        const bool balanceValid = !balanceValue.isNull();
+        account.insert(QStringLiteral("balanceValid"), balanceValid);
+        if (balanceValid) {
+            QString balance = jsonStr(balanceValue);
+            account.insert(QStringLiteral("balance"), balance.isEmpty() ? QStringLiteral("0") : balance);
+        }
         QString nonce = jsonStr(obj.value(QStringLiteral("nonce")));
         account.insert(QStringLiteral("nonce"), nonce.isEmpty() ? QStringLiteral("0") : nonce);
-        account.insert(QStringLiteral("dataSizeBytes"), obj.value(QStringLiteral("data_size")).toInt());
+
+        // Per-program data shards, keyed by the owning program's account id.
+        QVariantList shards;
+        for (const auto& entry : obj.value(QStringLiteral("shards")).toArray()) {
+            const QJsonObject shardObj = entry.toObject();
+            QVariantMap shard;
+            shard.insert(
+                QStringLiteral("programAccountId"), jsonStr(shardObj.value(QStringLiteral("program_account_id")))
+            );
+            shard.insert(QStringLiteral("dataSizeBytes"), shardObj.value(QStringLiteral("data_size")).toInt());
+            shards.append(shard);
+        }
+        account.insert(QStringLiteral("shards"), shards);
         return account;
     }
 

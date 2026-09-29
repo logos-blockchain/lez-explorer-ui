@@ -13,6 +13,7 @@ Item {
     property string accountId: ""
 
     property var account: ({})
+    readonly property var shards: account && account.shards ? account.shards : []
     property bool loaded: false
     property var txs: []
     property bool txsLoaded: false
@@ -52,14 +53,36 @@ Item {
                 InfoRow { label: "Account ID"; value: page.account.accountId || ""; mono: true; copyable: true }
                 InfoRow {
                     label: "Balance"
-                    value: page.account.balance || "0"
-                    valueColor: Theme.palette.success
+                    value: page.account.balanceValid === false ? "Invalid encoding" : (page.account.balance || "0")
+                    valueColor: page.account.balanceValid === false ? Theme.palette.textMuted : Theme.palette.success
                 }
-                InfoRow { label: "Program Owner"; value: page.account.programOwner || ""; mono: true; copyable: true }
                 InfoRow { label: "Nonce"; value: page.account.nonce || "0" }
-                InfoRow {
-                    label: "Data Size"
-                    value: (page.account.dataSizeBytes !== undefined ? page.account.dataSizeBytes : 0) + " bytes"
+            }
+
+            // Per-program data shards; the native balance lives in the native
+            // token program's shard.
+            SectionHeader {
+                visible: page.loaded && Object.keys(page.account).length > 1
+                title: "Shards (" + page.shards.length + ")"
+            }
+
+            LogosText {
+                visible: page.loaded && Object.keys(page.account).length > 1 && page.shards.length === 0
+                text: "No shards."
+                color: Theme.palette.textMuted
+                font.pixelSize: Theme.typography.secondaryText
+            }
+
+            Repeater {
+                model: page.shards
+                delegate: Card {
+                    Layout.fillWidth: true
+
+                    InfoRow { label: "Program Account"; value: modelData.programAccountId || ""; mono: true; copyable: true }
+                    InfoRow {
+                        label: "Data Size"
+                        value: (modelData.dataSizeBytes !== undefined ? modelData.dataSizeBytes : 0) + " bytes"
+                    }
                 }
             }
 

@@ -3,7 +3,7 @@ import QtQuick.Layouts
 import Logos.Controls
 import Logos.Theme
 
-// Clickable row for an account reference ({ accountId, nonce?, balance? }).
+// Clickable row for an account reference ({ accountId, programAccountId?, nonce?, balance? }).
 // Used for tx account lists and account search results.
 Rectangle {
     id: root
@@ -33,6 +33,14 @@ Rectangle {
             MonoText {
                 text: root.account.accountId || ""
                 color: Theme.palette.text
+                wrapMode: Text.NoWrap
+                elide: Text.ElideMiddle
+                Layout.fillWidth: true
+            }
+            MonoText {
+                visible: root.account.programAccountId !== undefined
+                text: "Program: " + (root.account.programAccountId || "")
+                color: Theme.palette.textMuted
                 wrapMode: Text.NoWrap
                 elide: Text.ElideMiddle
                 Layout.fillWidth: true
