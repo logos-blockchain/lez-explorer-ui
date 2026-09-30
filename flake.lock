@@ -189,16 +189,16 @@
         "logos-module-builder": "logos-module-builder"
       },
       "locked": {
-        "lastModified": 1790751384,
+        "lastModified": 1790752893,
         "narHash": "sha256-8Kz9ML7zOTP/WdsMl8NLNLPoKKCwx3hcwSgFsbTr7hs=",
-        "ref": "erhant/0.3.0-release-bumps",
-        "rev": "f4eeff07c5535ad4415390933c7c7d5f190499ea",
+        "ref": "main",
+        "rev": "7e882894df578ebea95c71d35650d45fada0205a",
         "revCount": 83,
         "type": "git",
         "url": "https://github.com/logos-blockchain/lez-indexer-module"
       },
       "original": {
-        "ref": "erhant/0.3.0-release-bumps",
+        "ref": "main",
         "type": "git",
         "url": "https://github.com/logos-blockchain/lez-indexer-module"
       }
