@@ -85,7 +85,6 @@ Item {
                     Item { Layout.fillWidth: true }
                 }
 
-                InfoRow { label: "Signature"; value: page.block.signature || ""; mono: true; copyable: true }
                 InfoRow { label: "Transactions"; value: String(page.block.txCount !== undefined ? page.block.txCount : 0) }
             }
 

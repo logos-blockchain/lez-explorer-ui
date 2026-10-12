@@ -5,7 +5,7 @@ A QML block explorer for the **Logos Execution Zone** (LEZ), packaged as a `logo
 ## Features
 
 - Browse recent blocks with a live tip poll (new heads appear automatically)
-- Block details: hash, previous hash, timestamp, Bedrock status, signature, transactions
+- Block details: hash, previous hash, timestamp, Bedrock status, transactions
 - Navigate to the previous block via a clickable hash link
 - Transaction details (Public, Privacy-Preserving, Program Deployment)
 - Account details with recent transaction history
