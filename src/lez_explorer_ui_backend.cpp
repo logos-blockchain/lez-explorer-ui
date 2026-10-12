@@ -244,7 +244,6 @@ namespace {
         block.insert(QStringLiteral("blockId"), static_cast<qlonglong>(jsonU64(obj.value(QStringLiteral("block_id")))));
         block.insert(QStringLiteral("hash"), jsonStr(obj.value(QStringLiteral("hash"))));
         block.insert(QStringLiteral("prevBlockHash"), jsonStr(obj.value(QStringLiteral("prev_block_hash"))));
-        block.insert(QStringLiteral("signature"), jsonStr(obj.value(QStringLiteral("signature"))));
         block.insert(QStringLiteral("timestampText"), timestampText(jsonU64(obj.value(QStringLiteral("timestamp")))));
 
         const QString status = obj.value(QStringLiteral("bedrock_status")).toString(QStringLiteral("Pending"));
