@@ -185,13 +185,16 @@ namespace {
                 const QJsonObject account = entry.toObject();
                 QVariantMap ref;
                 ref.insert(QStringLiteral("accountId"), jsonStr(account.value(QStringLiteral("account_id"))));
-                // Public txs select a program shard per account; absent for private ones.
+                // The program whose actor state the transaction touches on this account.
                 const QString programAccountId = jsonStr(account.value(QStringLiteral("program_account_id")));
                 if (!programAccountId.isEmpty()) {
                     ref.insert(QStringLiteral("programAccountId"), programAccountId);
                 }
-                QString nonce = jsonStr(account.value(QStringLiteral("nonce")));
-                ref.insert(QStringLiteral("nonce"), nonce.isEmpty() ? QStringLiteral("0") : nonce);
+                // Only accounts whose nonce the transaction bumps carry one.
+                const QString nonce = jsonStr(account.value(QStringLiteral("nonce")));
+                if (!nonce.isEmpty()) {
+                    ref.insert(QStringLiteral("nonce"), nonce);
+                }
                 accounts.append(ref);
             }
             return accounts;
@@ -230,6 +233,15 @@ namespace {
             );
             tx.insert(QStringLiteral("signatureCount"), obj.value(QStringLiteral("signature_count")).toInt());
             tx.insert(QStringLiteral("proofSizeBytes"), obj.value(QStringLiteral("proof_size")).toInt());
+            // The fee is paid inside the proof; only its refund target is public.
+            const QJsonValue feeValue = obj.value(QStringLiteral("fee"));
+            if (feeValue.isObject()) {
+                const QJsonObject feeObj = feeValue.toObject();
+                QVariantMap fee;
+                fee.insert(QStringLiteral("refundTo"), jsonStr(feeObj.value(QStringLiteral("refund_to"))));
+                fee.insert(QStringLiteral("hasFallback"), feeObj.value(QStringLiteral("has_fallback")).toBool());
+                tx.insert(QStringLiteral("fee"), fee);
+            }
         }
 
         return tx;
@@ -285,7 +297,7 @@ namespace {
         QVariantMap account;
         account.insert(QStringLiteral("accountId"),
                        accountId); // payload omits it; inject the queried id
-        // Native balance; null means the native shard holds an invalid encoding.
+        // Native balance; null means the native actor state holds an invalid encoding.
         const QJsonValue balanceValue = obj.value(QStringLiteral("balance"));
         const bool balanceValid = !balanceValue.isNull();
         account.insert(QStringLiteral("balanceValid"), balanceValid);
@@ -296,18 +308,18 @@ namespace {
         QString nonce = jsonStr(obj.value(QStringLiteral("nonce")));
         account.insert(QStringLiteral("nonce"), nonce.isEmpty() ? QStringLiteral("0") : nonce);
 
-        // Per-program data shards, keyed by the owning program's account id.
-        QVariantList shards;
-        for (const auto& entry : obj.value(QStringLiteral("shards")).toArray()) {
-            const QJsonObject shardObj = entry.toObject();
-            QVariantMap shard;
-            shard.insert(
-                QStringLiteral("programAccountId"), jsonStr(shardObj.value(QStringLiteral("program_account_id")))
+        // Per-program actor states, keyed by the owning program's account id.
+        QVariantList actorStates;
+        for (const auto& entry : obj.value(QStringLiteral("actor_states")).toArray()) {
+            const QJsonObject stateObj = entry.toObject();
+            QVariantMap state;
+            state.insert(
+                QStringLiteral("programAccountId"), jsonStr(stateObj.value(QStringLiteral("program_account_id")))
             );
-            shard.insert(QStringLiteral("dataSizeBytes"), shardObj.value(QStringLiteral("data_size")).toInt());
-            shards.append(shard);
+            state.insert(QStringLiteral("dataSizeBytes"), stateObj.value(QStringLiteral("data_size")).toInt());
+            actorStates.append(state);
         }
-        account.insert(QStringLiteral("shards"), shards);
+        account.insert(QStringLiteral("actorStates"), actorStates);
         return account;
     }
 

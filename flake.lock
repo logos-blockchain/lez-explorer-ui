@@ -2,11 +2,11 @@
   "nodes": {
     "crane": {
       "locked": {
-        "lastModified": 1780532242,
-        "narHash": "sha256-D+BsdpxmtUwtqGoY0IXPhHgTlmqgcZKCEo1oMyn7ep0=",
+        "lastModified": 1792350552,
+        "narHash": "sha256-292lvpvxTGKryKxh3/3tcIVi85CwYGdl4oOi113Sob8=",
         "owner": "ipetkov",
         "repo": "crane",
-        "rev": "59a82a1222dd3b2080b5cc52a1a2e8d5f1b77f37",
+        "rev": "e675a36b7377bebe41d548388a2501cbb16d380d",
         "type": "github"
       },
       "original": {
@@ -209,16 +209,16 @@
         "logos-module-builder": "logos-module-builder"
       },
       "locked": {
-        "lastModified": 1791787214,
-        "narHash": "sha256-NZMmo7jGo66cwlca4+xu7ijsqPFVFy4YKv9QuQajiuk=",
-        "ref": "main",
-        "rev": "87463b1173fc685dd40f789d5de013c2564519da",
-        "revCount": 90,
+        "lastModified": 1793351883,
+        "narHash": "sha256-aUNted0MRVtnYqP5UPX3WcvMYKgpvVC32DvNlHXM89E=",
+        "ref": "release/0.4.0",
+        "rev": "49bd13ce7e3ee235c0d4092a9d0e1b7bd3fe4b2e",
+        "revCount": 91,
         "type": "git",
         "url": "https://github.com/logos-blockchain/lez-indexer-module"
       },
       "original": {
-        "ref": "main",
+        "ref": "release/0.4.0",
         "type": "git",
         "url": "https://github.com/logos-blockchain/lez-indexer-module"
       }
@@ -1842,16 +1842,16 @@
         "rust-rapidsnark": "rust-rapidsnark"
       },
       "locked": {
-        "lastModified": 1791669386,
-        "narHash": "sha256-Tf2YnXIqbAmz2BnEk747WEOnAW6xOlszoe2mn85hRLU=",
+        "lastModified": 1793295142,
+        "narHash": "sha256-X5FHrJ2EPZjpK3j5Lzfu+flei4wepTrYiplUCVQIpow=",
         "owner": "logos-blockchain",
         "repo": "logos-execution-zone",
-        "rev": "1a003bfbfb89fcf987f62975cd08a401169e1b8c",
+        "rev": "1806e873ea2ac0e1b608aa7cf2f9b6e1fb12db21",
         "type": "github"
       },
       "original": {
         "owner": "logos-blockchain",
-        "ref": "v0.3.1",
+        "ref": "v0.4.0-rc1",
         "repo": "logos-execution-zone",
         "type": "github"
       }
@@ -5541,11 +5541,11 @@
         "nixpkgs-windows": "nixpkgs-windows"
       },
       "locked": {
-        "lastModified": 1789006373,
-        "narHash": "sha256-XMsTZhPheGAX+hPd1InIfFwSm8lzdTo3cKC4l2J6Pf0=",
+        "lastModified": 1789054121,
+        "narHash": "sha256-EOG96lY4KnZadh2lczZFMPnfPP9tWXdWt1p1CP8Gvww=",
         "owner": "logos-co",
         "repo": "logos-nix",
-        "rev": "2ab5416a1fb92d6fa3f0dee9a57500df614c4b5d",
+        "rev": "7c1eb8bc390546f32aaf134866a1c7db8e9311cc",
         "type": "github"
       },
       "original": {

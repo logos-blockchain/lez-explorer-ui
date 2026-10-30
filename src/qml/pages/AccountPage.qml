@@ -13,7 +13,7 @@ Item {
     property string accountId: ""
 
     property var account: ({})
-    readonly property var shards: account && account.shards ? account.shards : []
+    readonly property var actorStates: account && account.actorStates ? account.actorStates : []
     property bool loaded: false
     property var txs: []
     property bool txsLoaded: false
@@ -59,22 +59,22 @@ Item {
                 InfoRow { label: "Nonce"; value: page.account.nonce || "0" }
             }
 
-            // Per-program data shards; the native balance lives in the native
-            // token program's shard.
+            // Per-program actor states; the native balance lives in the native
+            // token program's actor state.
             SectionHeader {
                 visible: page.loaded && Object.keys(page.account).length > 1
-                title: "Shards (" + page.shards.length + ")"
+                title: "Actor States (" + page.actorStates.length + ")"
             }
 
             LogosText {
-                visible: page.loaded && Object.keys(page.account).length > 1 && page.shards.length === 0
-                text: "No shards."
+                visible: page.loaded && Object.keys(page.account).length > 1 && page.actorStates.length === 0
+                text: "No actor states."
                 color: Theme.palette.textMuted
                 font.pixelSize: Theme.typography.secondaryText
             }
 
             Repeater {
-                model: page.shards
+                model: page.actorStates
                 delegate: Card {
                     Layout.fillWidth: true
 

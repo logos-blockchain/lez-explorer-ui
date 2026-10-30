@@ -129,6 +129,36 @@ Item {
                 }
             }
 
+            // Privacy-preserving fee: paid inside the proof, so the amount and
+            // payer stay private; only the refund target is public.
+            SectionHeader {
+                visible: page.loaded && page.txType === "PrivacyPreserving"
+                title: "Fee"
+            }
+            Card {
+                Layout.fillWidth: true
+                visible: page.loaded && page.txType === "PrivacyPreserving"
+
+                LogosText {
+                    visible: page.tx.fee === undefined
+                    text: "No fee declared"
+                    color: Theme.palette.textMuted
+                    font.pixelSize: Theme.typography.secondaryText
+                }
+                InfoRow {
+                    visible: page.tx.fee !== undefined
+                    label: "Paid"; value: "In proof (private)"
+                }
+                InfoRow {
+                    visible: page.tx.fee !== undefined && !!page.tx.fee.refundTo
+                    label: "Refund To"; value: page.tx.fee ? page.tx.fee.refundTo : ""; mono: true; copyable: true
+                }
+                InfoRow {
+                    visible: page.tx.fee !== undefined
+                    label: "Fallback Action"; value: page.tx.fee && page.tx.fee.hasFallback ? "Yes" : "No"
+                }
+            }
+
             SectionHeader {
                 visible: page.loaded && page.tx.accounts !== undefined && page.tx.accounts.length > 0
                 title: "Accounts (" + (page.tx.accounts ? page.tx.accounts.length : 0) + ")"
