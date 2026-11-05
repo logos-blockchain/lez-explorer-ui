@@ -21,21 +21,21 @@
 #include <QTimer>
 
 // Generated umbrella: LogosModules (behind modules()) built from
-// metadata.json#dependencies — the Qt-typed wrappers for lez_indexer_module.
+// metadata.json#dependencies — the Qt-typed wrappers for lez_core.
 #include "logos_sdk.h"
 
 namespace {
 
     constexpr int kPollIntervalMs = 2000;
-    // The indexer module process can come up well after our onContextReady
+    // The core module process can come up well after our onContextReady
     // (tens of seconds), and a typed call made before it listens silently
     // returns 0 — so the launch auto-start re-attempts on this many polls.
     constexpr int kAutoStartRetries = 45;
     // Above this gap we rebuild the feed from the backend rather than fetch every
-    // missing block one by one (matches the former LpIndexerService threshold).
+    // missing block one by one.
     constexpr quint64 kGapRebuildThreshold = 8;
 
-    // Map the indexer FFI's OperationStatus to a human message.
+    // Map the core FFI's OperationStatus to a human message.
     QString startErrorMessage(qlonglong code) {
         switch (code) {
         case 2: // OperationStatus::InitializationError
