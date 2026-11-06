@@ -8,11 +8,11 @@ import Logos.Theme
 RowLayout {
     id: root
 
-    // Indexer state, verbatim from the backend's syncStatus.
+    // Sequencer state, verbatim from the backend's syncStatus.
     property string syncState: ""
     property string syncError: ""
     property int chainHeight: 0
-    // Set by the owner: syncError names a transport failure AND the indexer is
+    // Set by the owner: syncError names a transport failure AND the sequencer is
     // not currently making progress.
     property bool nodeUnreachable: false
 
@@ -32,9 +32,9 @@ RowLayout {
         if (root.nodeUnreachable)
             return "The explorer can't index new blocks until it's running.";
         if (root.syncState === "Error")
-            return root.syncError !== "" ? root.syncError : "Indexer error";
+            return root.syncError !== "" ? root.syncError : "Sequencer error";
         if (root.syncState === "Stalled")
-            return "Indexer stalled" + (root.syncError !== "" ? ": " + root.syncError : "")
+            return "Sequencer stalled" + (root.syncError !== "" ? ": " + root.syncError : "")
                  + " · block " + root.heightText;
         if (root.syncState === "CaughtUp")
             return root.chainHeight > 0 ? "Up to date · block " + root.heightText
@@ -42,9 +42,9 @@ RowLayout {
         if (root.syncState === "Syncing")
             return "Syncing… · block " + root.heightText;
         if (root.syncState === "Stopped")
-            return root.startFailed ? "Indexer failed to start: " + root.syncError
-                                    : "Indexer not running";
-        return "Starting indexer…";
+            return root.startFailed ? "Sequencer failed to start: " + root.syncError
+                                    : "Sequencer not running";
+        return "Starting sequencer…";
     }
 
     LogosNotice {

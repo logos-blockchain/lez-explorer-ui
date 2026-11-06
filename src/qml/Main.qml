@@ -134,7 +134,7 @@ Rectangle {
             onSettingsClicked: root.navigateSettings()
         }
 
-        IndexerStatusBar {
+        SequencerStatusBar {
             syncState: root.syncState
             syncError: root.syncError
             chainHeight: root.backend ? root.backend.chainHeight : 0
@@ -144,7 +144,7 @@ Rectangle {
 
         SearchBar {
             Layout.fillWidth: true
-            // Only searchable once the indexer is actually answering.
+            // Only searchable once the sequencer is actually answering.
             enabled: root.backend && root.backend.connectionStatus === "Connected"
             onSearchRequested: function (query) {
                 if (!root.backend || query.trim().length === 0)
@@ -192,7 +192,7 @@ Rectangle {
                 Layout.alignment: Qt.AlignHCenter
             }
             LogosText {
-                text: "Connecting to indexer backend…"
+                text: "Connecting to sequencer backend…"
                 color: Theme.palette.textSecondary
                 font.pixelSize: Theme.typography.secondaryText
                 Layout.alignment: Qt.AlignHCenter

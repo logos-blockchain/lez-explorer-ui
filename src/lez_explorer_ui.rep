@@ -6,14 +6,14 @@
 //
 // State the view binds to is exposed as auto-synced PROPs; one-shot lookups are
 // SLOTs whose return value is delivered to QML via logos.watch(...). Everything
-// is Qt-typed (the QtRO wire contract); the backend converts the indexer's
+// is Qt-typed (the QtRO wire contract); the backend converts the sequencer's
 // compact JSON into QVariantMap/QVariantList before it crosses this boundary.
 class LezExplorerUi
 {
     // Recent-blocks feed shown on the home page (newest first). Backend-owned:
     // the 2 s poll prepends new heads and "Load more" appends older pages.
     PROP(QVariantList recentBlocks READONLY)
-    // Tip block id (from the indexer status' indexed_block_id).
+    // Tip block id (from the sequencer status' indexed_block_id).
     PROP(qlonglong chainHeight=0 READONLY)
     // "Connecting" / "Connected" / "Error" — drives the health indicator.
     PROP(QString connectionStatus READONLY)
@@ -23,7 +23,7 @@ class LezExplorerUi
     // "Stopped"), blockId: qulonglong, error: QString }. Lets the view show the current
     // phase (or the error) so "catching up" reads differently from "failed".
     PROP(QVariantMap syncStatus READONLY)
-    // The indexer config JSON currently in effect (seeded with the default
+    // The sequencer config JSON currently in effect (seeded with the default
     // config on first launch). The Settings editor seeds from this (falling
     // back to defaultConfig).
     PROP(QString configText READONLY)
@@ -31,15 +31,15 @@ class LezExplorerUi
     // editor's "Reset to default".
     PROP(QString defaultConfig READONLY)
 
-    // Persist `json` as the indexer config and (re)start ingestion from it, then
+    // Persist `json` as the sequencer config and (re)start ingestion from it, then
     // refresh the feed. The backend writes the JSON to a file itself — the UI
     // never deals with paths. Returns true on success.
     SLOT(bool applyConfigJson(QString json))
-    // Delete the indexer's RocksDB cache and restart from the saved config: the
+    // Delete the sequencer's RocksDB cache and restart from the saved config: the
     // recovery path when the local store is stale against a different/reset chain
-    // (otherwise the indexer can sit at "caught up" on a mismatched store).
+    // (otherwise the sequencer can sit at "caught up" on a mismatched store).
     // Returns true on success.
-    SLOT(bool resetIndexerCache())
+    SLOT(bool resetSequencerCache())
     // Reload the latest page into recentBlocks and re-baseline the poller.
     SLOT(void refreshBlocks())
     // Append the next older page of blocks to recentBlocks.
@@ -54,6 +54,6 @@ class LezExplorerUi
     // Composed client-side: { blocks: [...], transactions: [...], accounts: [...] }.
     SLOT(QVariantMap search(QString query))
 
-    // Surfaced to the view for transient failures (e.g. a failed start_indexer).
+    // Surfaced to the view for transient failures (e.g. a failed start_sequencer).
     SIGNAL(error(QString message))
 }
