@@ -5,7 +5,7 @@ import Logos.Controls
 import Logos.Theme
 
 // Search input + button. Emits searchRequested(query) on Enter or button click.
-// Bind the built-in `enabled` (e.g. to the indexer connection state) to block
+// Bind the built-in `enabled` (e.g. to the sequencer connection state) to block
 // searching when there's nothing to query; it dims and goes non-interactive.
 RowLayout {
     id: root
@@ -46,7 +46,7 @@ RowLayout {
                 Layout.alignment: Qt.AlignVCenter
                 placeholderText: root.enabled
                     ? "Search by block id / block hash / tx hash / account id…"
-                    : "Connect an indexer to search…"
+                    : "Connect an sequencer to search…"
                 color: Theme.palette.text
                 placeholderTextColor: Theme.palette.textMuted
                 font.pixelSize: Theme.typography.secondaryText

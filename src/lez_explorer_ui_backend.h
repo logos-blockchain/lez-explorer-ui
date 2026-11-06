@@ -15,18 +15,18 @@ class QTimer;
  * The only hand-written C++ in this module: it derives the repc-generated
  * `LezExplorerUiSimpleSource` (so it implements the `.rep` view contract) and
  * `LogosUiPluginContext` (which supplies `onContextReady()` and the Qt-typed
- * `modules()` accessors for the `lez_indexer_module` dependency). The
+ * `modules()` accessors for the `lez_core` dependency). The
  * `*Plugin` / `*Interface` glue is generated.
  *
- * It reads from the indexer with typed calls — `modules().lez_indexer_module.*`
- * — which return the indexer's compact JSON as QString. This class converts
- * that JSON into QVariantMap / QVariantList (schema preserved from the former
- * `LpIndexerService`) for the QML view, and runs a 2 s poll on the chain tip to
- * keep `recentBlocks` / `chainHeight` live (the indexer emits no events).
+ * It reads from the sequencer with typed calls — `modules().lez_core.*`
+ * — which return the sequencer's compact JSON as QString. This class converts
+ * that JSON into QVariantMap / QVariantList 
+ * for the QML view, and runs a 2 s poll on the chain tip to
+ * keep `recentBlocks` / `chainHeight` live (the sequencer emits no events).
  *
- * Config is edited in-app (Settings page) as JSON, not as a path: the indexer's
- * `start_indexer` takes a file path, so this class persists the edited JSON to a
- * writable file and starts the indexer from there. The last-saved config is
+ * Config is edited in-app (Settings page) as JSON, not as a path: the sequencer's
+ * `start_sequencer` takes a file path, so this class persists the edited JSON to a
+ * writable file and starts the sequencer from there. The last-saved config is
  * reloaded and auto-started on the next launch.
  */
 class LezExplorerUiBackend : public LezExplorerUiSimpleSource, public LogosUiPluginContext {
@@ -40,7 +40,7 @@ public:
 
     // .rep SLOTs.
     bool applyConfigJson(QString json) override;
-    bool resetIndexerCache() override;
+    bool resetSequencerCache() override;
     void refreshBlocks() override;
     void loadMoreBlocks() override;
     QVariantMap getBlockById(QString id) override;
@@ -53,11 +53,11 @@ public:
 private:
     // Tip poll: detect new heads and append/rebuild the recent-blocks feed.
     void pollTip();
-    // Parse the indexer's status JSON, publish the `syncStatus` PROP + the
+    // Parse the sequencer's status JSON, publish the `syncStatus` PROP + the
     // legacy `connectionStatus`, and return the indexed tip (0 if none yet).
     quint64 applySyncStatus(const QString& json);
     // Forget everything derived from the previously indexed chain (published
-    // height + poll baseline). Called whenever the indexer is (re)started, since
+    // height + poll baseline). Called whenever the sequencer is (re)started, since
     // it may come back on a different channel or an emptied store.
     void resetPollBaseline();
     // Drop the recent-blocks feed and its paging bounds.
@@ -68,19 +68,19 @@ private:
     QVariantList parseBlockArrayJson(const QString& json) const;
 
     // Writable path where the edited config JSON is persisted, and where the
-    // indexer is started from. Computed once (lazily).
+    // sequencer is started from. Computed once (lazily).
     QString configFilePath();
     bool writeConfigFile(const QString& json);
     QString readConfigFile() const;
-    // start_indexer from configFilePath(); returns true on success.
-    bool startIndexerFromFile();
+    // start_sequencer from configFilePath(); returns true on success.
+    bool startSequencerFromFile();
 
     QString m_configFilePath;
     // Human message of the most recent failed start, cleared on a successful
-    // start. Injected into syncStatus while the indexer is stopped so the
+    // start. Injected into syncStatus while the sequencer is stopped so the
     // banner can say WHY instead of a neutral "not running".
     QString m_lastStartError;
-    // Remaining pollTip re-attempts of the launch auto-start. The indexer
+    // Remaining pollTip re-attempts of the launch auto-start. The sequencer
     // module process can come up long after onContextReady, and a typed call
     // made before it listens silently returns success without doing anything.
     int m_autoStartRetriesLeft = 0;

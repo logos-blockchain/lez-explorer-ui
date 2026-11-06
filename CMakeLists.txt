@@ -19,7 +19,7 @@ endif()
 # generated_code/ (Q_PLUGIN_METADATA, initLogos wiring, QtRO registration) is
 # compiled automatically. The QML view (src/qml/) is delivered by the host
 # alongside the plugin — no Qt Widgets, no .qrc. The logos SDK/protocol (incl.
-# the typed lez_indexer_module wrappers) is linked by the builder.
+# the typed lez_core wrappers) is linked by the builder.
 logos_module(
     NAME lez_explorer_ui
     REP_FILE src/lez_explorer_ui.rep
