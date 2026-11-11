@@ -573,7 +573,8 @@ QVariantMap LezExplorerUiBackend::search(QString query) {
 }
 
 quint64 LezExplorerUiBackend::applySyncStatus(const QString& json) {
-    const SyncStatus parsed = parseSyncStatus(json);
+    // TODO: Replace with normal parsing when [955](https://github.com/logos-blockchain/logos-execution-zone/pull/955) merged in LEZ.
+    const SyncStatus parsed = parseSyncStatusFromLatestBlockId(json);
 
     // A failed start leaves getStatus empty => "Stopped", which would lose the
     // reason — carry the remembered start error into the banner's status.
@@ -612,7 +613,8 @@ quint64 LezExplorerUiBackend::applySyncStatus(const QString& json) {
 void LezExplorerUiBackend::pollTip() {
     // One status call drives both the sync banner and the feed: indexedBlockId
     // is the L2 tip we page from.
-    const QString statusJson = modules().lez_core.getStatus();
+    // TODO: Replace with normal status after [955](https://github.com/logos-blockchain/logos-execution-zone/pull/955) merged in LEZ.
+    const QString statusJson = modules().lez_core.getLastFinalizedBlockId();
     const quint64 tip = applySyncStatus(statusJson);
 
     // Launch auto-start retry: an empty status means no sequencer is running —

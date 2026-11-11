@@ -19,8 +19,7 @@ class LezExplorerUi
     PROP(QString connectionStatus READONLY)
     // Ingestion status for the first-launch/sync banner, refreshed by the tip
     // poll. Map of { state: "Stopped"|"Starting"|"Syncing"|"CaughtUp"|"Error"|
-    // "Stalled" (core `IndexerSyncState` names verbatim, plus the UI-only
-    // "Stopped"), blockId: qulonglong, error: QString }. Lets the view show the current
+    // "Stalled", blockId: qulonglong, error: QString }. Lets the view show the current
     // phase (or the error) so "catching up" reads differently from "failed".
     PROP(QVariantMap syncStatus READONLY)
     // The sequencer config JSON currently in effect (seeded with the default

@@ -18,7 +18,7 @@ RowLayout {
 
     signal openBlockchainAppRequested()
 
-    objectName: "explorerIndexerStatus"
+    objectName: "explorerSequencerStatus"
     Layout.fillWidth: true
     spacing: Theme.spacing.medium
 
