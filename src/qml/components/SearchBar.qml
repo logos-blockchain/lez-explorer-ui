@@ -46,7 +46,7 @@ RowLayout {
                 Layout.alignment: Qt.AlignVCenter
                 placeholderText: root.enabled
                     ? "Search by block id / block hash / tx hash / account id…"
-                    : "Connect an sequencer to search…"
+                    : "Connect a sequencer to search…"
                 color: Theme.palette.text
                 placeholderTextColor: Theme.palette.textMuted
                 font.pixelSize: Theme.typography.secondaryText

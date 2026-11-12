@@ -265,7 +265,7 @@ Item {
         // destructive confirm — point the user at Save first.
         if (!page.backend.configText || page.backend.configText.length === 0) {
             page.confirmingReset = false;
-            page.setStatus("Save an sequencer config first, then you can delete the cache.", true);
+            page.setStatus("Save a sequencer config first, then you can delete the cache.", true);
             return;
         }
         if (!page.confirmingReset) {

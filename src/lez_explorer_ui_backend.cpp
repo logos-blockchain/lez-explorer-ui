@@ -57,7 +57,6 @@ namespace {
     // channel id, initial accounts/commitments, signing key, ...) and saves.
     // MUST tell user to add peers, or define them on release ourselves.
     const char* const kDefaultConfig = R"JSON({
-    "home": ".",
     "max_num_tx_in_block": 100,
     "mempool_max_size": 100,
     "block_create_timeout": "1h",
@@ -421,14 +420,14 @@ bool LezExplorerUiBackend::resetSequencerCache() {
     // restart from it afterwards. Without one there's nothing to reset against, so
     // don't wipe-then-fail-to-restart.
     if (readConfigFile().trimmed().isEmpty()) {
-        emit error(QStringLiteral("Save an sequencer config before deleting the cache."));
+        emit error(QStringLiteral("Save a sequencer config before deleting the cache."));
         return false;
     }
 
     // reset_storage stops the sequencer and deletes its RocksDB store; then we
     // restart from the saved config so it re-indexes the current chain from
     // scratch. The recovery path for a store left stale against a reset chain.
-    const qlonglong code = modules().lez_core.reset_storage(configFilePath());
+    const qlonglong code = modules().lez_core.reset_storage(configFilePath(), false);
     if (code != 0) {
         emit error(QStringLiteral("Failed to delete the sequencer cache (code %1).").arg(code));
         return false;
