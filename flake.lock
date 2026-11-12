@@ -42,11 +42,11 @@
         "nix-bundle-lgx": "nix-bundle-lgx_2"
       },
       "locked": {
-        "lastModified": 1794487063,
-        "narHash": "sha256-wFCIsotVCSYD1AqbaZX/+LXdB+nsKIei8emLQNTzF+Y=",
+        "lastModified": 1794487795,
+        "narHash": "sha256-nRG+mwJyZGu4+ozIOyZnmqUO71qVw/+H/w54g5CJBUk=",
         "ref": "Pravdyvy/sequencer-ffi-query-api",
-        "rev": "f10a556e4c03b98bbd7a44fccfa4044c94f135e9",
-        "revCount": 165,
+        "rev": "e5a3444036e7af9897e21bda80a17c8e7fcb6f61",
+        "revCount": 166,
         "type": "git",
         "url": "https://github.com/logos-blockchain/logos-execution-zone-module"
       },
