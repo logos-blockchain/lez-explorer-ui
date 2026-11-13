@@ -64,7 +64,7 @@ Item {
                 }
                 InfoRow {
                     visible: page.txType === "Public"
-                    label: "Instruction Data"
+                    label: "Message"
                     value: page.tx.message ? page.tx.message : "(empty)"
                     mono: !!page.tx.message
                     copyable: !!page.tx.message
