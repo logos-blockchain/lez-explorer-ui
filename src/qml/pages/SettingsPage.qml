@@ -41,13 +41,13 @@ Item {
         anchors.fill: parent
         spacing: Theme.spacing.medium
 
-        SectionHeader { title: "Indexer Settings" }
+        SectionHeader { title: "Sequencer Settings" }
 
         LogosText {
             Layout.fillWidth: true
             wrapMode: Text.WordWrap
-            text: "The indexer starts automatically with these settings. Change a field "
-                  + "and press Save to persist the config and restart the indexer."
+            text: "The sequencer starts automatically with these settings. Change a field "
+                  + "and press Save to persist the config and restart the sequencer."
             color: Theme.palette.textSecondary
             font.pixelSize: Theme.typography.secondaryText
         }
@@ -153,7 +153,7 @@ Item {
                 font.pixelSize: Theme.typography.secondaryText
             }
 
-            // Delete the indexer's RocksDB cache and re-sync (two-tap confirm).
+            // Delete the sequencer's RocksDB cache and re-sync (two-tap confirm).
             Rectangle {
                 Layout.preferredHeight: 38
                 Layout.preferredWidth: 150
@@ -256,7 +256,7 @@ Item {
         page.setStatus("", false);
     }
 
-    // Delete the indexer's RocksDB cache and re-sync. First tap arms; a second
+    // Delete the sequencer's RocksDB cache and re-sync. First tap arms; a second
     // tap confirms (it's destructive — wipes the local index).
     function resetCache() {
         if (!page.backend)
@@ -265,7 +265,7 @@ Item {
         // destructive confirm — point the user at Save first.
         if (!page.backend.configText || page.backend.configText.length === 0) {
             page.confirmingReset = false;
-            page.setStatus("Save an indexer config first, then you can delete the cache.", true);
+            page.setStatus("Save a sequencer config first, then you can delete the cache.", true);
             return;
         }
         if (!page.confirmingReset) {
@@ -275,10 +275,10 @@ Item {
         }
         page.confirmingReset = false;
         page.setStatus("Deleting cache…", false);
-        logos.watch(page.backend.resetIndexerCache(),
+        logos.watch(page.backend.resetSequencerCache(),
             function (ok) {
                 if (ok) {
-                    page.setStatus("Cache deleted. Indexer restarting…", false);
+                    page.setStatus("Cache deleted. Sequencer restarting…", false);
                     page.explorer.goHome();
                 }
                 // On failure the backend emits error() (shown by onError above).
@@ -328,7 +328,7 @@ Item {
         var out = JSON.stringify(obj, null, 4);
 
         // Edits that cancel out (or a Save with nothing touched) shouldn't
-        // bounce the indexer — compare semantically so formatting differences
+        // bounce the sequencer — compare semantically so formatting differences
         // with the stored JSON don't force a restart.
         var current = page.backend.configText;
         if (current && current.length > 0) {
@@ -349,7 +349,7 @@ Item {
             function (ok) {
                 if (ok) {
                     page.seedEditor(out);
-                    page.setStatus("Saved. Indexer starting…", false);
+                    page.setStatus("Saved. Sequencer starting…", false);
                     page.explorer.goHome();
                 }
                 // On failure the backend emits error() with a specific reason

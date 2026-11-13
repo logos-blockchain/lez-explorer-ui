@@ -64,10 +64,10 @@ Item {
                 }
                 InfoRow {
                     visible: page.txType === "Public"
-                    label: "Instruction Data"
-                    value: page.tx.instructionData ? page.tx.instructionData : "(empty)"
-                    mono: !!page.tx.instructionData
-                    copyable: !!page.tx.instructionData
+                    label: "Message"
+                    value: page.tx.message ? page.tx.message : "(empty)"
+                    mono: !!page.tx.message
+                    copyable: !!page.tx.message
                 }
                 InfoRow {
                     visible: page.txType === "Public" || page.txType === "PrivacyPreserving"

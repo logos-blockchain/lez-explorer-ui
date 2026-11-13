@@ -21,51 +21,52 @@
 #include <QTimer>
 
 // Generated umbrella: LogosModules (behind modules()) built from
-// metadata.json#dependencies — the Qt-typed wrappers for lez_indexer_module.
+// metadata.json#dependencies — the Qt-typed wrappers for lez_core.
 #include "logos_sdk.h"
 
 namespace {
 
     constexpr int kPollIntervalMs = 2000;
-    // The indexer module process can come up well after our onContextReady
+    // The core module process can come up well after our onContextReady
     // (tens of seconds), and a typed call made before it listens silently
     // returns 0 — so the launch auto-start re-attempts on this many polls.
     constexpr int kAutoStartRetries = 45;
     // Above this gap we rebuild the feed from the backend rather than fetch every
-    // missing block one by one (matches the former LpIndexerService threshold).
+    // missing block one by one.
     constexpr quint64 kGapRebuildThreshold = 8;
 
-    // Map the indexer FFI's OperationStatus to a human message.
+    // Map the core FFI's FfiOperationError to a human message.
     QString startErrorMessage(qlonglong code) {
         switch (code) {
-        case 2: // OperationStatus::InitializationError
+        case 4: // FfiOperationError::SequencerInitializationError
             return QStringLiteral(
-                "Indexer failed to initialize: This is usually a "
+                "Sequencer failed to initialize: This is usually a "
                 "storage problem. The data directory is locked by another running "
-                "indexer / isn't writable, or there is an invalid config field."
+                "sequencer / isn't writable, or there is an invalid config field."
+                "It is also possible, that bedrock node address is unreachable."
             );
-        case 3: // OperationStatus::ClientError
-            return QStringLiteral(
-                "Indexer client error while starting: check the bedrock "
-                "node address in the config and ensure the node is reachable."
-            );
-        case 1: // OperationStatus::NullPointer
-            return QStringLiteral("Indexer failed to start (NullPointer).");
+        case 1: // FfiOperationError::NullPointer
+            return QStringLiteral("Sequencer failed to start (NullPointer).");
         default:
-            return QStringLiteral("Indexer failed to start (OperationStatus %1).").arg(code);
+            return QStringLiteral("Sequencer failed to start (FfiOperationError %1).").arg(code);
         }
     }
 
     // Starter config shown in the Settings editor (and its "Reset to default").
-    // A working local-dev indexer config; the user edits the fields (bedrock addr,
+    // A working local-dev sequencer config; the user edits the fields (bedrock addr,
     // channel id, initial accounts/commitments, signing key, ...) and saves.
+    // MUST tell user to add peers, or define them on release ourselves.
     const char* const kDefaultConfig = R"JSON({
-    "consensus_info_polling_interval": "1s",
+    "max_num_tx_in_block": 100,
+    "mempool_max_size": 100,
+    "block_create_timeout": "1h",
     "bedrock_config": {
-        "addr": "http://localhost:8080"
+        "node_url": "http://localhost:8080",
+        "channel_id": "0101010101010101010101010101010101010101010101010101010101010101"
     },
-    "channel_id": "0101010101010101010101010101010101010101010101010101010101010101",
-    "allow_chain_reset": true
+    "gossip": {
+        "bootstrap_peers": []
+    }
 })JSON";
 
     // 64/128-bit values arrive as decimal strings (to dodge JSON double precision
@@ -94,7 +95,7 @@ namespace {
     }
 
     // Account ids are Base58 (matching the wallet UI and canonical LEZ); block/tx
-    // hashes are hex. These mirror the indexer module's codec so the explorer can
+    // hashes are hex. These mirror the sequencer module's codec so the explorer can
     // recognise an account-shaped query and always display the canonical Base58
     // form.
     const char* const kBase58Alphabet = "123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz";
@@ -203,7 +204,7 @@ namespace {
         if (type == QLatin1String("Public")) {
             tx.insert(QStringLiteral("programAccountId"), jsonStr(obj.value(QStringLiteral("program_account_id"))));
             tx.insert(QStringLiteral("accounts"), accountsOf(obj.value(QStringLiteral("accounts")).toArray()));
-            tx.insert(QStringLiteral("instructionData"), jsonStr(obj.value(QStringLiteral("instruction_data"))));
+            tx.insert(QStringLiteral("message"), jsonStr(obj.value(QStringLiteral("message"))));
             tx.insert(QStringLiteral("signatureCount"), obj.value(QStringLiteral("signature_count")).toInt());
             // Declared fee caps (null for fee-exempt/system txs); omitted when absent.
             const QJsonValue feeValue = obj.value(QStringLiteral("fee"));
@@ -348,7 +349,7 @@ void LezExplorerUiBackend::onContextReady() {
     setConnectionStatus(QStringLiteral("Connecting"));
 
     // Reload the previously-saved config — or, on first launch, seed the
-    // built-in default so the indexer starts without a Settings visit — and
+    // built-in default so the sequencer starts without a Settings visit — and
     // auto-start (set-once UX).
     QString saved = readConfigFile();
     if (saved.trimmed().isEmpty() && writeConfigFile(defaultConfig())) {
@@ -356,20 +357,20 @@ void LezExplorerUiBackend::onContextReady() {
     }
     if (!saved.trimmed().isEmpty()) {
         setConfigText(saved);
-        // This first attempt races the indexer module's own startup: the call
+        // This first attempt races the core module's own startup: the call
         // no-ops (returns 0) if the module isn't listening yet. pollTip keeps
         // retrying while the status stays silent.
         m_autoStartRetriesLeft = kAutoStartRetries;
-        startIndexerFromFile();
+        startSequencerFromFile();
     }
 
-    // The indexer pushes no events — poll the tip for live head updates.
+    // The core pushes no events — poll the tip for live head updates.
     m_pollTimer = new QTimer(this);
     m_pollTimer->setInterval(kPollIntervalMs);
     connect(m_pollTimer, &QTimer::timeout, this, &LezExplorerUiBackend::pollTip);
     m_pollTimer->start();
 
-    // pollTip() makes a synchronous cross-process call into lez_indexer_module.
+    // pollTip() makes a synchronous cross-process call into lez_core.
     // On shutdown the host SIGTERMs that dependency and only waits ~3s before
     // SIGKILL, while our IPC timeout is ~20s — so a poll landing mid-teardown
     // blocks on a dead peer and freezes the window. Stop polling the instant the
@@ -390,7 +391,7 @@ bool LezExplorerUiBackend::applyConfigJson(QString json) {
         emit error(QStringLiteral("Config is empty."));
         return false;
     }
-    // Reject invalid JSON up front so we never start the indexer from garbage.
+    // Reject invalid JSON up front so we never start the sequencer from garbage.
     QJsonParseError parseError;
     QJsonDocument::fromJson(trimmed.toUtf8(), &parseError);
     if (parseError.error != QJsonParseError::NoError) {
@@ -404,9 +405,9 @@ bool LezExplorerUiBackend::applyConfigJson(QString json) {
     }
     setConfigText(json);
 
-    const bool ok = startIndexerFromFile();
+    const bool ok = startSequencerFromFile();
 
-    // Re-baseline the poller; a (re)started indexer may ingest afresh — and the
+    // Re-baseline the poller; a (re)started sequencer may ingest afresh — and the
     // edit may have pointed it at a different channel, whose store is separate
     // and possibly empty.
     resetPollBaseline();
@@ -414,33 +415,33 @@ bool LezExplorerUiBackend::applyConfigJson(QString json) {
     return ok;
 }
 
-bool LezExplorerUiBackend::resetIndexerCache() {
+bool LezExplorerUiBackend::resetSequencerCache() {
     // A saved config is required: reset_storage reads the channel from it, and we
     // restart from it afterwards. Without one there's nothing to reset against, so
     // don't wipe-then-fail-to-restart.
     if (readConfigFile().trimmed().isEmpty()) {
-        emit error(QStringLiteral("Save an indexer config before deleting the cache."));
+        emit error(QStringLiteral("Save a sequencer config before deleting the cache."));
         return false;
     }
 
-    // reset_storage stops the indexer and deletes its RocksDB store; then we
+    // reset_storage stops the sequencer and deletes its RocksDB store; then we
     // restart from the saved config so it re-indexes the current chain from
     // scratch. The recovery path for a store left stale against a reset chain.
-    const qlonglong code = modules().lez_indexer_module.reset_storage(configFilePath());
+    const qlonglong code = modules().lez_core.reset_storage(configFilePath(), false);
     if (code != 0) {
-        emit error(QStringLiteral("Failed to delete the indexer cache (code %1).").arg(code));
+        emit error(QStringLiteral("Failed to delete the sequencer cache (code %1).").arg(code));
         return false;
     }
 
     // Store is empty now; re-baseline the poller and restart ingestion.
     resetPollBaseline();
-    const bool ok = startIndexerFromFile();
+    const bool ok = startSequencerFromFile();
     refreshBlocks();
     return ok;
 }
 
 void LezExplorerUiBackend::refreshBlocks() {
-    const QString json = modules().lez_indexer_module.getBlocks(QString(), QStringLiteral("10"));
+    const QString json = modules().lez_core.getBlocks(QString(), QStringLiteral("10"));
     m_recentBlocks = parseBlockArrayJson(json);
 
     m_newestLoadedId = 0;
@@ -462,7 +463,7 @@ void LezExplorerUiBackend::loadMoreBlocks() {
         return; // already at genesis
     }
     const QString json =
-        modules().lez_indexer_module.getBlocks(QString::number(m_oldestLoadedId), QStringLiteral("10"));
+        modules().lez_core.getBlocks(QString::number(m_oldestLoadedId), QStringLiteral("10"));
     const QVariantList older = parseBlockArrayJson(json);
     if (older.isEmpty()) {
         return;
@@ -479,23 +480,23 @@ void LezExplorerUiBackend::loadMoreBlocks() {
 }
 
 QVariantMap LezExplorerUiBackend::getBlockById(QString id) {
-    return blockJsonToMap(modules().lez_indexer_module.getBlockById(id));
+    return blockJsonToMap(modules().lez_core.getBlockById(id));
 }
 
 QVariantMap LezExplorerUiBackend::getBlockByHash(QString hash) {
-    return blockJsonToMap(modules().lez_indexer_module.getBlockByHash(hash));
+    return blockJsonToMap(modules().lez_core.getBlockByHash(hash));
 }
 
 QVariantMap LezExplorerUiBackend::getTransaction(QString hash) {
-    return txJsonToMap(modules().lez_indexer_module.getTransaction(hash));
+    return txJsonToMap(modules().lez_core.getTransaction(hash));
 }
 
 QVariantMap LezExplorerUiBackend::getAccount(QString accountId) {
-    return accountJsonToMap(accountId, modules().lez_indexer_module.getAccount(accountId));
+    return accountJsonToMap(accountId, modules().lez_core.getAccount(accountId));
 }
 
 QVariantList LezExplorerUiBackend::getTransactionsByAccount(QString accountId, int offset, int limit) {
-    const QString json = modules().lez_indexer_module.getTransactionsByAccount(
+    const QString json = modules().lez_core.getTransactionsByAccount(
         accountId, QString::number(offset), QString::number(limit)
     );
     if (json.isEmpty()) {
@@ -571,7 +572,8 @@ QVariantMap LezExplorerUiBackend::search(QString query) {
 }
 
 quint64 LezExplorerUiBackend::applySyncStatus(const QString& json) {
-    const SyncStatus parsed = parseSyncStatus(json);
+    // TODO: Replace with normal parsing when [955](https://github.com/logos-blockchain/logos-execution-zone/pull/955) merged in LEZ.
+    const SyncStatus parsed = parseSyncStatusFromLatestBlockId(json);
 
     // A failed start leaves getStatus empty => "Stopped", which would lose the
     // reason — carry the remembered start error into the banner's status.
@@ -610,10 +612,11 @@ quint64 LezExplorerUiBackend::applySyncStatus(const QString& json) {
 void LezExplorerUiBackend::pollTip() {
     // One status call drives both the sync banner and the feed: indexedBlockId
     // is the L2 tip we page from.
-    const QString statusJson = modules().lez_indexer_module.getStatus();
+    // TODO: Replace with normal status after [955](https://github.com/logos-blockchain/logos-execution-zone/pull/955) merged in LEZ.
+    const QString statusJson = modules().lez_core.getLastFinalizedBlockId();
     const quint64 tip = applySyncStatus(statusJson);
 
-    // Launch auto-start retry: an empty status means no indexer is running —
+    // Launch auto-start retry: an empty status means no sequencer is running —
     // either the module was still booting when onContextReady's start call
     // fired (the typed call silently no-ops then) or the start failed. Retry
     // until the module answers; a real module-side failure (non-zero start
@@ -621,14 +624,14 @@ void LezExplorerUiBackend::pollTip() {
     if (m_autoStartRetriesLeft > 0) {
         if (!statusJson.isEmpty()) {
             m_autoStartRetriesLeft = 0;
-        } else if (--m_autoStartRetriesLeft > 0 && !startIndexerFromFile()) {
+        } else if (--m_autoStartRetriesLeft > 0 && !startSequencerFromFile()) {
             m_autoStartRetriesLeft = 0;
         }
     }
-    // Publish the tip on every poll, including 0. The indexer namespaces its
+    // Publish the tip on every poll, including 0. The sequencer namespaces its
     // store per channel, so pointing it at a different channel reports "nothing
     // indexed" — keeping the previous channel's height published would leave the
-    // banner claiming a block the indexer no longer has.
+    // banner claiming a block the sequencer no longer has.
     setChainHeight(static_cast<qlonglong>(tip));
 
     if (tip == 0) {
@@ -707,7 +710,7 @@ void LezExplorerUiBackend::clearBlockFeed() {
 }
 
 QVariantMap LezExplorerUiBackend::fetchBlock(quint64 blockId) {
-    return blockJsonToMap(modules().lez_indexer_module.getBlockById(QString::number(blockId)));
+    return blockJsonToMap(modules().lez_core.getBlockById(QString::number(blockId)));
 }
 
 QVariantList LezExplorerUiBackend::parseBlockArrayJson(const QString& json) const {
@@ -732,7 +735,7 @@ QVariantList LezExplorerUiBackend::parseBlockArrayJson(const QString& json) cons
 }
 
 namespace {
-    // The writable path where the edited config JSON is persisted and the indexer
+    // The writable path where the edited config JSON is persisted and the sequencer
     // is started from (so the UI never deals with paths). Same logic, shared by the
     // const and non-const accessors.
     QString resolveConfigFilePath() {
@@ -740,7 +743,7 @@ namespace {
         if (dir.isEmpty()) {
             dir = QDir::tempPath();
         }
-        return QDir(dir).filePath(QStringLiteral("indexer_config.json"));
+        return QDir(dir).filePath(QStringLiteral("sequencer_config.json"));
     }
 } // namespace
 
@@ -777,13 +780,13 @@ QString LezExplorerUiBackend::readConfigFile() const {
     return content;
 }
 
-bool LezExplorerUiBackend::startIndexerFromFile() {
-    // stops the indexer if it's already running, then starts it with the config
+bool LezExplorerUiBackend::startSequencerFromFile() {
+    // stops the sequencer if it's already running, then starts it with the config
     // file path.
     //
-    // this has the effect of "restarting" the indexer with the new config.
-    modules().lez_indexer_module.stop_indexer();
-    const qlonglong code = modules().lez_indexer_module.start_indexer(configFilePath());
+    // this has the effect of "restarting" the sequencer with the new config.
+    modules().lez_core.stop_sequencer();
+    const qlonglong code = modules().lez_core.start_sequencer(configFilePath());
     if (code != 0) {
         m_lastStartError = startErrorMessage(code);
         emit error(m_lastStartError);
