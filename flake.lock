@@ -42,16 +42,16 @@
         "nix-bundle-lgx": "nix-bundle-lgx_2"
       },
       "locked": {
-        "lastModified": 1794576016,
-        "narHash": "sha256-vN9joZnQctghtLIa9o3EGg/VtRwD4nLjV5IIDDqy44w=",
-        "ref": "main",
-        "rev": "cc73ebfe0857705cfc1c3b29743fb6c8c6aebd82",
-        "revCount": 171,
+        "lastModified": 1794909439,
+        "narHash": "sha256-D0MWvTj84X0vojYZ334V889RSE60tL8BanesWSfbOSk=",
+        "ref": "Pravdyvy/v-0-4-0-rc-3-adaptation",
+        "rev": "df1a80aaf231f83989bb599b8a324efb4140d516",
+        "revCount": 172,
         "type": "git",
         "url": "https://github.com/logos-blockchain/logos-execution-zone-module"
       },
       "original": {
-        "ref": "main",
+        "ref": "Pravdyvy/v-0-4-0-rc-3-adaptation",
         "type": "git",
         "url": "https://github.com/logos-blockchain/logos-execution-zone-module"
       }
@@ -233,16 +233,16 @@
         "rust-rapidsnark": "rust-rapidsnark"
       },
       "locked": {
-        "lastModified": 1793295142,
-        "narHash": "sha256-X5FHrJ2EPZjpK3j5Lzfu+flei4wepTrYiplUCVQIpow=",
+        "lastModified": 1794360994,
+        "narHash": "sha256-ElqO2Xg5FLs1EeKtPvYt85QnPn04HCM2NF70dptbVlo=",
         "owner": "logos-blockchain",
         "repo": "logos-execution-zone",
-        "rev": "1806e873ea2ac0e1b608aa7cf2f9b6e1fb12db21",
+        "rev": "bafd07be0701398f9bc435f73ab05e9a7936c301",
         "type": "github"
       },
       "original": {
         "owner": "logos-blockchain",
-        "ref": "v0.4.0-rc1",
+        "ref": "v0.4.0-rc3",
         "repo": "logos-execution-zone",
         "type": "github"
       }
