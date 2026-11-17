@@ -1,7 +1,7 @@
 {
   "name": "lez_explorer_ui",
   "display_name": "LEZ Explorer",
-  "version": "1.2.3",
+  "version": "1.3.0-rc1",
   "type": "ui_qml",
   "interface": "universal",
   "category": "explorer",
@@ -9,7 +9,7 @@
   "main": "lez_explorer_ui_plugin",
   "icon": "src/icons/lez_explorer.png",
   "view": "qml/Main.qml",
-  "dependencies": [{ "name": "lez_indexer_module", "version": ">=1.2.0" }],
+  "dependencies": [{ "name": "lez_core", "version": ">=0.6.0" }],
   "uses": [{ "intent": "basecamp.apps.launch" }],
   "codegen": { "rep": "src/lez_explorer_ui.rep" },
   "nix": {

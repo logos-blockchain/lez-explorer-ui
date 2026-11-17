@@ -1,6 +1,6 @@
 # LEZ Explorer UI
 
-A QML block explorer for the **Logos Execution Zone** (LEZ), packaged as a `logos-module-builder` **`ui_qml`** module (universal authoring model). The QML view runs process-isolated in a `ui-host`, backed by a small C++ backend that reads from the [`lez_indexer_module`](https://github.com/logos-blockchain/lez-indexer-module) **in-process over the Logos protocol** (Qt Remote Objects) — no WebSocket, no external RPC socket.
+A QML block explorer for the **Logos Execution Zone** (LEZ), packaged as a `logos-module-builder` **`ui_qml`** module (universal authoring model). The QML view runs process-isolated in a `ui-host`, backed by a small C++ backend that reads from the [`lez_core`](https://github.com/logos-blockchain/logos-execution-zone-module) **in-process over the Logos protocol** (Qt Remote Objects) — no WebSocket, no external RPC socket.
 
 ## Features
 
@@ -12,7 +12,7 @@ A QML block explorer for the **Logos Execution Zone** (LEZ), packaged as a `logo
 - Search by block id, block hash, transaction hash, or account id
 - Browser-style back/forward navigation
 - "Load more" pagination for older blocks
-- Copy buttons on hashes / ids; in-app **Settings** JSON editor to configure & (re)start the indexer (no file paths; persists across launches)
+- Copy buttons on hashes / ids; in-app **Settings** JSON editor to configure & (re)start the sequencer (no file paths; persists across launches)
 - Styled with the shared `Logos.Theme` / `Logos.Controls` design system
 
 ## Architecture
@@ -20,7 +20,7 @@ A QML block explorer for the **Logos Execution Zone** (LEZ), packaged as a `logo
 - `src/lez_explorer_ui.rep` — the QtRO view contract (PROPs / SLOTs / SIGNALs).
 - `src/lez_explorer_ui_backend.{h,cpp}` — the only hand-written C++: derives the
   generated `LezExplorerUiSimpleSource` + `LogosUiPluginContext`, calls the
-  indexer with typed `modules().lez_indexer_module.*`, converts its compact JSON
+  sequencer with typed `modules().lez_core.*`, converts its compact JSON
   into QVariant for the view, and polls the chain tip for live updates.
 - `src/qml/` — the view (`Main.qml`, `pages/`, `components/`, `icons/`).
 
@@ -35,11 +35,11 @@ nix run .           # preview in logos-standalone-app (spawns the ui-host)
 nix build .#lgx     # bundle as a .lgx for logos-basecamp
 ```
 
-Running against live data: open **Settings** (gear icon, top-right), edit the indexer config JSON (pre-filled with a working template) and press **Save & Start** — the explorer persists the config and (re)starts the indexer from it, so no file paths are involved, and it auto-restarts from the saved config on the next launch. Load the explorer and indexer `.lgx` bundles together in logos-basecamp for the full experience.
+Running against live data: open **Settings** (gear icon, top-right), edit the sequencer config JSON (pre-filled with a working template) and press **Save & Start** — the explorer persists the config and (re)starts the sequencer from it, so no file paths are involved, and it auto-restarts from the saved config on the next launch. Load the explorer and core `.lgx` bundles together in logos-basecamp for the full experience.
 
 ## Testing
 
-`tests/ui-tests.mjs` holds UI smoke tests (auto-detected by `mkLogosQmlModule`): they launch the view, wait for it to come up, and check the home page renders. They don't require a running indexer — with none ingesting, the backend stays in its "Connecting" empty state, which is expected.
+`tests/ui-tests.mjs` holds UI smoke tests (auto-detected by `mkLogosQmlModule`): they launch the view, wait for it to come up, and check the home page renders. They don't require a running sequencer — with none ingesting, the backend stays in its "Connecting" empty state, which is expected.
 
 ```sh
 git add -A                       # nix only sees tracked files
@@ -48,11 +48,11 @@ nix build .#integration-test -L  # build + run the tests (logs streamed with -L)
 
 > [!TIP]
 >
-> To iterate interactively against a local, un-pushed indexer branch, add the override used during development:
+> To iterate interactively against a local, un-pushed core branch, add the override used during development:
 >
 > ```sh
 > nix build .#integration-test -L \
->   --override-input lez_indexer_module path:../lez-indexer-module
+>   --override-input lez_core path:../logos-execution-zone-module
 > ```
 
 ## License

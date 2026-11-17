@@ -19,7 +19,7 @@ Item {
     readonly property string syncError: (sync && sync.error) ? sync.error : ""
 
     // A Stopped state with an error means auto-start failed (Task 1 injects
-    // the reason); plain Stopped means the indexer simply isn't running.
+    // the reason); plain Stopped means the sequencer simply isn't running.
     readonly property bool startFailed: syncState === "Stopped" && syncError !== ""
 
     readonly property bool nodeUnreachable: page.explorer ? !!page.explorer.nodeUnreachable : false
@@ -32,19 +32,19 @@ Item {
         if (page.nodeUnreachable)
             return "Waiting for the blockchain node.\nStart it and indexing resumes on its own.";
         if (page.syncState === "Error")
-            return (page.syncError !== "" ? "Indexer error: " + page.syncError : "Indexer error.")
+            return (page.syncError !== "" ? "Sequencer error: " + page.syncError : "Sequencer error.")
                  + "\nOpen Settings to reconfigure and restart.";
         if (page.syncState === "Stalled")
-            return (page.syncError !== "" ? "Indexer stalled: " + page.syncError : "Indexer stalled on an invalid block.")
+            return (page.syncError !== "" ? "Sequencer stalled: " + page.syncError : "Sequencer stalled on an invalid block.")
                  + "\nIndexed blocks up to the stall are still browsable.";
         if (page.startFailed)
-            return "Indexer failed to start: " + page.syncError
+            return "Sequencer failed to start: " + page.syncError
                  + "\nOpen Settings to fix the configuration.";
         if (page.syncState === "Syncing" || page.syncState === "Starting")
-            return "Indexer is syncing, please wait…";
+            return "Sequencer is syncing, please wait…";
         if (page.syncState === "CaughtUp")
             return "No blocks indexed yet.";
-        return "No indexer running.\nOpen Settings to configure and start it.";
+        return "No sequencer running.\nOpen Settings to configure and start it.";
     }
 
     ColumnLayout {
