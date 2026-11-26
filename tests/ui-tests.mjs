@@ -6,7 +6,7 @@ const root = process.env.LOGOS_QT_MCP || new URL("../result-mcp", import.meta.ur
 const { test, run } = await import(resolve(root, "test-framework/framework.mjs"));
 
 // Smoke tests: the view loads and the pages render. The backend now
-// auto-starts the indexer from a seeded default config; with no bedrock
+// auto-starts the sequencer from a seeded default config; with no bedrock
 // running in the harness that start fails or errors, which is fine — these
 // tests only assert the QML comes up and the backend is wired.
 

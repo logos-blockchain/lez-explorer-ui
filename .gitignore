@@ -5,5 +5,5 @@ build
 # ignore lgx builds
 lez-explorer-ui-*-lgx-*
 
-# ignore rocksdb (may appear here during indexer tests)
+# ignore rocksdb (may appear here during core tests)
 rocksdb*
