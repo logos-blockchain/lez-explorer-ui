@@ -47,9 +47,22 @@ namespace {
             );
         case 1: // FfiOperationError::NullPointer
             return QStringLiteral("Sequencer failed to start (NullPointer).");
+        case 3: // FfiOperationError::InvalidArgument
+            return QStringLiteral(
+                "Sequencer failed to start: the config has an unknown or invalid field."
+            );
         default:
             return QStringLiteral("Sequencer failed to start (FfiOperationError %1).").arg(code);
         }
+    }
+
+    // The explorer only follows a channel, so it never inscribes and its Bedrock funding key is
+    // never used; setting a home up still takes a valid one.
+    const char* const kUnusedFundingPublicKey =
+        "0000000000000000000000000000000000000000000000000000000000000000";
+
+    QString compactJson(const QJsonObject& object) {
+        return QString::fromUtf8(QJsonDocument(object).toJson(QJsonDocument::Compact));
     }
 
     // Starter config shown in the Settings editor (and its "Reset to default").
@@ -781,12 +794,30 @@ QString LezExplorerUiBackend::readConfigFile() const {
 }
 
 bool LezExplorerUiBackend::startSequencerFromFile() {
-    // stops the sequencer if it's already running, then starts it with the config
-    // file path.
-    //
-    // this has the effect of "restarting" the sequencer with the new config.
+    // The sequencer runs out of lez_core's own home (an empty home means its sequencer_dir(), where
+    // reset_storage looks too). Set that home up once: it holds the channel signing key.
+    if (!modules().lez_core.is_sequencer_set_up(QString())) {
+        const QJsonObject setupArgs{
+            {QStringLiteral("config"), configFilePath()},
+            {QStringLiteral("funding_public_key"), QString::fromLatin1(kUnusedFundingPublicKey)},
+        };
+        if (modules().lez_core.setup_sequencer(QString(), compactJson(setupArgs)).isEmpty()) {
+            m_lastStartError = QStringLiteral(
+                "Could not set up the sequencer's home: check the config and the module's logs."
+            );
+            emit error(m_lastStartError);
+            return false;
+        }
+    }
+
+    // Stops the sequencer if it's already running, then starts it with the saved config, which
+    // has the effect of "restarting" it with the new config. The config is passed every time, so
+    // Settings edits apply; any genesis in it is dropped, as a follower doesn't create the channel.
+    // No wait_for_channel: the call is synchronous over IPC, so a missing channel should fail fast
+    // (the auto-start retries cover a channel that isn't there yet).
     modules().lez_core.stop_sequencer();
-    const qlonglong code = modules().lez_core.start_sequencer(configFilePath());
+    const QJsonObject overrides{{QStringLiteral("config"), configFilePath()}};
+    const qlonglong code = modules().lez_core.start_sequencer(QString(), compactJson(overrides));
     if (code != 0) {
         m_lastStartError = startErrorMessage(code);
         emit error(m_lastStartError);
