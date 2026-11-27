@@ -73,6 +73,7 @@ namespace {
     "max_num_tx_in_block": 100,
     "mempool_max_size": 100,
     "block_create_timeout": "1h",
+    "retry_pending_blocks_timeout": "5s",
     "bedrock_config": {
         "node_url": "http://localhost:8080",
         "channel_id": "0101010101010101010101010101010101010101010101010101010101010101"
