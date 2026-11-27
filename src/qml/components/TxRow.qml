@@ -35,6 +35,13 @@ Rectangle {
             Layout.alignment: Qt.AlignVCenter
         }
 
+        Badge {
+            visible: !!root.tx.receipt && !root.tx.receipt.success
+            text: "Reverted"
+            accent: Theme.palette.error
+            Layout.alignment: Qt.AlignVCenter
+        }
+
         TxTypeBadge {
             type: root.tx.type || "Public"
             Layout.alignment: Qt.AlignVCenter
