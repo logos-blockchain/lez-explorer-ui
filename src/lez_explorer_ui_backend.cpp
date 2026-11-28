@@ -81,7 +81,7 @@ namespace {
     "retry_pending_blocks_timeout": "7s",
     "bedrock_config": {
         "node_url": "http://localhost:8080",
-        "channel_id": "0101010101010101010101010101010101010101010101010101010101010101"
+        "channel_id": "0404040404040404040404040404040404040404040404040404040404040404"
     },
     "gossip": {
         "bootstrap_peers": []
