@@ -49,6 +49,7 @@ Item {
                 visible: page.loaded && Object.keys(page.tx).length > 0
 
                 InfoRow { label: "Hash"; value: page.tx.hash || ""; mono: true; copyable: true }
+                InfoRow { visible: !!page.tx.blockId; label: "Block"; value: page.tx.blockId ? "#" + page.tx.blockId : "" }
                 RowLayout {
                     Layout.fillWidth: true
                     spacing: Theme.spacing.medium
@@ -95,15 +96,35 @@ Item {
                 }
             }
 
-            // Fee declaration (public txs only). These are the declared caps,
-            // not the amount actually charged; absent for fee-exempt/system txs.
+            // What the transaction was charged.
             SectionHeader {
-                visible: page.loaded && page.txType === "Public"
+                visible: page.loaded && page.tx.receipt !== undefined
+                title: "Receipt"
+            }
+            Card {
+                Layout.fillWidth: true
+                visible: page.loaded && page.tx.receipt !== undefined
+
+                InfoRow {
+                    label: "Outcome"
+                    value: page.tx.receipt && page.tx.receipt.success ? "Applied" : "Reverted (fee still charged)"
+                }
+                InfoRow { label: "Execution Gas"; value: page.tx.receipt ? page.tx.receipt.gasExec : "" }
+                InfoRow { label: "Storage Gas"; value: page.tx.receipt ? page.tx.receipt.gasStor : "" }
+                InfoRow { label: "Base Fee"; value: page.tx.receipt ? page.tx.receipt.feeBase : "" }
+                InfoRow { label: "Tip"; value: page.tx.receipt ? page.tx.receipt.tip : "" }
+                InfoRow { label: "Refund"; value: page.tx.receipt ? page.tx.receipt.refund : "" }
+            }
+
+            // The declared caps, not the amount charged. Public txs always show
+            // this card; privacy-preserving ones only when a public signer pays.
+            SectionHeader {
+                visible: page.loaded && (page.txType === "Public" || page.tx.fee !== undefined)
                 title: "Fee Declaration"
             }
             Card {
                 Layout.fillWidth: true
-                visible: page.loaded && page.txType === "Public"
+                visible: page.loaded && (page.txType === "Public" || page.tx.fee !== undefined)
 
                 LogosText {
                     visible: page.tx.fee === undefined
@@ -129,33 +150,24 @@ Item {
                 }
             }
 
-            // Privacy-preserving fee: paid inside the proof, so the amount and
-            // payer stay private; only the refund target is public.
+            // Fee paid inside the proof: the amount and payer stay private; only
+            // the tip and the refund target are public.
             SectionHeader {
-                visible: page.loaded && page.txType === "PrivacyPreserving"
-                title: "Fee"
+                visible: page.loaded && page.tx.provenFee !== undefined
+                title: "Fee In Proof"
             }
             Card {
                 Layout.fillWidth: true
-                visible: page.loaded && page.txType === "PrivacyPreserving"
+                visible: page.loaded && page.tx.provenFee !== undefined
 
-                LogosText {
-                    visible: page.tx.fee === undefined
-                    text: "No fee declared"
-                    color: Theme.palette.textMuted
-                    font.pixelSize: Theme.typography.secondaryText
+                InfoRow { label: "Paid"; value: "In proof (private)" }
+                InfoRow { label: "Tip"; value: page.tx.provenFee ? page.tx.provenFee.tip : "" }
+                InfoRow {
+                    visible: !!page.tx.provenFee && !!page.tx.provenFee.refundTo
+                    label: "Refund To"; value: page.tx.provenFee ? page.tx.provenFee.refundTo : ""; mono: true; copyable: true
                 }
                 InfoRow {
-                    visible: page.tx.fee !== undefined
-                    label: "Paid"; value: "In proof (private)"
-                }
-                InfoRow {
-                    visible: page.tx.fee !== undefined && !!page.tx.fee.refundTo
-                    label: "Refund To"; value: page.tx.fee ? page.tx.fee.refundTo : ""; mono: true; copyable: true
-                }
-                InfoRow {
-                    visible: page.tx.fee !== undefined
-                    label: "Fallback Action"; value: page.tx.fee && page.tx.fee.hasFallback ? "Yes" : "No"
+                    label: "Fallback Action"; value: page.tx.provenFee && page.tx.provenFee.hasFallback ? "Yes" : "No"
                 }
             }
 

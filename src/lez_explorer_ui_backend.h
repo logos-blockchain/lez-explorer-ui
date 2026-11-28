@@ -54,8 +54,8 @@ private:
     // Tip poll: detect new heads and append/rebuild the recent-blocks feed.
     void pollTip();
     // Parse the sequencer's status JSON, publish the `syncStatus` PROP + the
-    // legacy `connectionStatus`, and return the indexed tip (0 if none yet).
-    quint64 applySyncStatus(const QString& json);
+    // legacy `connectionStatus`, and return whether the executor is online.
+    bool applySyncStatus(const QString& json);
     // Forget everything derived from the previously indexed chain (published
     // height + poll baseline). Called whenever the sequencer is (re)started, since
     // it may come back on a different channel or an emptied store.

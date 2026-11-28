@@ -12,6 +12,9 @@ RowLayout {
     property string syncState: ""
     property string syncError: ""
     property int chainHeight: 0
+    // Bootstrap progress in Bedrock slots; 0 when not reported.
+    property real replayedSlot: 0
+    property real targetSlot: 0
     // Set by the owner: syncError names a transport failure AND the sequencer is
     // not currently making progress.
     property bool nodeUnreachable: false
@@ -40,7 +43,9 @@ RowLayout {
             return root.chainHeight > 0 ? "Up to date · block " + root.heightText
                                         : "Up to date · no blocks indexed";
         if (root.syncState === "Syncing")
-            return "Syncing… · block " + root.heightText;
+            return root.targetSlot > 0
+                ? "Syncing… · slot " + root.replayedSlot + " of " + root.targetSlot
+                : "Syncing…";
         if (root.syncState === "Stopped")
             return root.startFailed ? "Sequencer failed to start: " + root.syncError
                                     : "Sequencer not running";

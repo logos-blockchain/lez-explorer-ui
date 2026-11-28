@@ -138,6 +138,8 @@ Rectangle {
             syncState: root.syncState
             syncError: root.syncError
             chainHeight: root.backend ? root.backend.chainHeight : 0
+            replayedSlot: root.syncStatus && root.syncStatus.replayedSlot ? root.syncStatus.replayedSlot : 0
+            targetSlot: root.syncStatus && root.syncStatus.targetSlot ? root.syncStatus.targetSlot : 0
             nodeUnreachable: root.nodeUnreachable
             onOpenBlockchainAppRequested: root.openBlockchainApp()
         }

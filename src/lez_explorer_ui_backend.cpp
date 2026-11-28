@@ -45,6 +45,11 @@ namespace {
                 "sequencer / isn't writable, or there is an invalid config field."
                 "It is also possible, that bedrock node address is unreachable."
             );
+        case 14: // FfiOperationError::RuntimeError
+            return QStringLiteral(
+                "The previous sequencer start is still waiting on its node and holds the "
+                "data directory. Try again once it gives up, or restart the app."
+            );
         case 1: // FfiOperationError::NullPointer
             return QStringLiteral("Sequencer failed to start (NullPointer).");
         case 3: // FfiOperationError::InvalidArgument
@@ -73,7 +78,7 @@ namespace {
     "max_num_tx_in_block": 100,
     "mempool_max_size": 100,
     "block_create_timeout": "1h",
-    "retry_pending_blocks_timeout": "5s",
+    "retry_pending_blocks_timeout": "7s",
     "bedrock_config": {
         "node_url": "http://localhost:8080",
         "channel_id": "0101010101010101010101010101010101010101010101010101010101010101"
@@ -200,6 +205,7 @@ namespace {
                 const QJsonObject account = entry.toObject();
                 QVariantMap ref;
                 ref.insert(QStringLiteral("accountId"), jsonStr(account.value(QStringLiteral("account_id"))));
+                ref.insert(QStringLiteral("signer"), account.value(QStringLiteral("signer")).toBool());
                 // The program whose actor state the transaction touches on this account.
                 const QString programAccountId = jsonStr(account.value(QStringLiteral("program_account_id")));
                 if (!programAccountId.isEmpty()) {
@@ -215,22 +221,43 @@ namespace {
             return accounts;
         };
 
+        // Declared fee caps; absent for fee-exempt txs and fees paid inside a proof.
+        const QJsonValue feeValue = obj.value(QStringLiteral("fee"));
+        if (feeValue.isObject()) {
+            const QJsonObject feeObj = feeValue.toObject();
+            QVariantMap fee;
+            fee.insert(QStringLiteral("payer"), jsonStr(feeObj.value(QStringLiteral("payer"))));
+            fee.insert(QStringLiteral("gasLimit"), jsonStr(feeObj.value(QStringLiteral("gas_limit"))));
+            fee.insert(QStringLiteral("tip"), jsonStr(feeObj.value(QStringLiteral("tip"))));
+            fee.insert(QStringLiteral("maxFee"), jsonStr(feeObj.value(QStringLiteral("max_fee"))));
+            tx.insert(QStringLiteral("fee"), fee);
+        }
+
+        // What the transaction was charged; absent for the fee and clock
+        // transactions that close a block.
+        const QJsonValue receiptValue = obj.value(QStringLiteral("receipt"));
+        if (receiptValue.isObject()) {
+            const QJsonObject receiptObj = receiptValue.toObject();
+            QVariantMap receipt;
+            receipt.insert(QStringLiteral("success"), receiptObj.value(QStringLiteral("success")).toBool());
+            receipt.insert(QStringLiteral("gasExec"), jsonStr(receiptObj.value(QStringLiteral("gas_exec"))));
+            receipt.insert(QStringLiteral("gasStor"), jsonStr(receiptObj.value(QStringLiteral("gas_stor"))));
+            receipt.insert(QStringLiteral("feeBase"), jsonStr(receiptObj.value(QStringLiteral("fee_base"))));
+            receipt.insert(QStringLiteral("tip"), jsonStr(receiptObj.value(QStringLiteral("tip"))));
+            receipt.insert(QStringLiteral("refund"), jsonStr(receiptObj.value(QStringLiteral("refund"))));
+            tx.insert(QStringLiteral("receipt"), receipt);
+        }
+        // Only transaction lookups name their block; a block's own list does not.
+        const QString blockId = jsonStr(obj.value(QStringLiteral("block_id")));
+        if (!blockId.isEmpty()) {
+            tx.insert(QStringLiteral("blockId"), blockId);
+        }
+
         if (type == QLatin1String("Public")) {
             tx.insert(QStringLiteral("programAccountId"), jsonStr(obj.value(QStringLiteral("program_account_id"))));
             tx.insert(QStringLiteral("accounts"), accountsOf(obj.value(QStringLiteral("accounts")).toArray()));
             tx.insert(QStringLiteral("message"), jsonStr(obj.value(QStringLiteral("message"))));
             tx.insert(QStringLiteral("signatureCount"), obj.value(QStringLiteral("signature_count")).toInt());
-            // Declared fee caps (null for fee-exempt/system txs); omitted when absent.
-            const QJsonValue feeValue = obj.value(QStringLiteral("fee"));
-            if (feeValue.isObject()) {
-                const QJsonObject feeObj = feeValue.toObject();
-                QVariantMap fee;
-                fee.insert(QStringLiteral("payer"), jsonStr(feeObj.value(QStringLiteral("payer"))));
-                fee.insert(QStringLiteral("gasLimit"), jsonStr(feeObj.value(QStringLiteral("gas_limit"))));
-                fee.insert(QStringLiteral("tip"), jsonStr(feeObj.value(QStringLiteral("tip"))));
-                fee.insert(QStringLiteral("maxFee"), jsonStr(feeObj.value(QStringLiteral("max_fee"))));
-                tx.insert(QStringLiteral("fee"), fee);
-            }
         } else if (type == QLatin1String("PrivacyPreserving")) {
             tx.insert(QStringLiteral("accounts"), accountsOf(obj.value(QStringLiteral("accounts")).toArray()));
             // One private action = nullifier + root + commitment + encrypted
@@ -248,14 +275,15 @@ namespace {
             );
             tx.insert(QStringLiteral("signatureCount"), obj.value(QStringLiteral("signature_count")).toInt());
             tx.insert(QStringLiteral("proofSizeBytes"), obj.value(QStringLiteral("proof_size")).toInt());
-            // The fee is paid inside the proof; only its refund target is public.
-            const QJsonValue feeValue = obj.value(QStringLiteral("fee"));
-            if (feeValue.isObject()) {
-                const QJsonObject feeObj = feeValue.toObject();
-                QVariantMap fee;
-                fee.insert(QStringLiteral("refundTo"), jsonStr(feeObj.value(QStringLiteral("refund_to"))));
-                fee.insert(QStringLiteral("hasFallback"), feeObj.value(QStringLiteral("has_fallback")).toBool());
-                tx.insert(QStringLiteral("fee"), fee);
+            // Fee paid inside the proof: only its tip and refund target are public.
+            const QJsonValue provenValue = obj.value(QStringLiteral("proven_fee"));
+            if (provenValue.isObject()) {
+                const QJsonObject provenObj = provenValue.toObject();
+                QVariantMap proven;
+                proven.insert(QStringLiteral("tip"), jsonStr(provenObj.value(QStringLiteral("tip"))));
+                proven.insert(QStringLiteral("refundTo"), jsonStr(provenObj.value(QStringLiteral("refund_to"))));
+                proven.insert(QStringLiteral("hasFallback"), provenObj.value(QStringLiteral("has_fallback")).toBool());
+                tx.insert(QStringLiteral("provenFee"), proven);
             }
         }
 
@@ -585,12 +613,16 @@ QVariantMap LezExplorerUiBackend::search(QString query) {
     return results;
 }
 
-quint64 LezExplorerUiBackend::applySyncStatus(const QString& json) {
-    // TODO: Replace with normal parsing when [955](https://github.com/logos-blockchain/logos-execution-zone/pull/955) merged in LEZ.
-    const SyncStatus parsed = parseSyncStatusFromLatestBlockId(json);
+bool LezExplorerUiBackend::applySyncStatus(const QString& json) {
+    const SyncStatus parsed = parseSyncStatus(json);
 
-    // A failed start leaves getStatus empty => "Stopped", which would lose the
-    // reason — carry the remembered start error into the banner's status.
+    // A start can fail after start_sequencer has returned; the status then says so.
+    if (parsed.startErrorCode != 0) {
+        m_lastStartError = startErrorMessage(parsed.startErrorCode);
+    }
+
+    // A stopped sequencer reports no reason itself — carry the remembered start
+    // error into the banner's status.
     QString errorMsg = parsed.error;
     if (parsed.state == QLatin1String("Stopped") && !m_lastStartError.isEmpty()) {
         errorMsg = m_lastStartError;
@@ -606,6 +638,8 @@ quint64 LezExplorerUiBackend::applySyncStatus(const QString& json) {
     QVariantMap status;
     status.insert(QStringLiteral("state"), shownState);
     status.insert(QStringLiteral("blockId"), static_cast<qulonglong>(parsed.blockId));
+    status.insert(QStringLiteral("replayedSlot"), static_cast<qulonglong>(parsed.replayedSlot));
+    status.insert(QStringLiteral("targetSlot"), static_cast<qulonglong>(parsed.targetSlot));
     status.insert(QStringLiteral("error"), errorMsg);
     setSyncStatus(status);
 
@@ -620,15 +654,15 @@ quint64 LezExplorerUiBackend::applySyncStatus(const QString& json) {
         setConnectionStatus(QStringLiteral("Connecting"));
     }
 
-    return parsed.blockId;
+    return parsed.state == QLatin1String("CaughtUp");
 }
 
 void LezExplorerUiBackend::pollTip() {
-    // One status call drives both the sync banner and the feed: indexedBlockId
-    // is the L2 tip we page from.
-    // TODO: Replace with normal status after [955](https://github.com/logos-blockchain/logos-execution-zone/pull/955) merged in LEZ.
-    const QString statusJson = modules().lez_core.getLastFinalizedBlockId();
-    const quint64 tip = applySyncStatus(statusJson);
+    const QString statusJson = modules().lez_core.getStatus();
+    // State queries fail until the executor is online, so only then ask for the
+    // finalized tip the feed pages from.
+    const bool online = applySyncStatus(statusJson);
+    const quint64 tip = online ? modules().lez_core.getLastFinalizedBlockId().trimmed().toULongLong() : 0;
 
     // Launch auto-start retry: an empty status means no sequencer is running —
     // either the module was still booting when onContextReady's start call
