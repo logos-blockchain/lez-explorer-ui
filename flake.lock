@@ -42,16 +42,16 @@
         "nix-bundle-lgx": "nix-bundle-lgx_2"
       },
       "locked": {
-        "lastModified": 1795825664,
+        "lastModified": 1795827352,
         "narHash": "sha256-k5ogWuigjJmM+75qDJP627BlJzJaK0aol1mi5xBYKvo=",
-        "ref": "refs/heads/main",
-        "rev": "7bf906459f53f0ed324a7a0ee57159552f43b0a3",
-        "revCount": 182,
+        "ref": "main",
+        "rev": "371831f8232199692404bfb3d5fd982143525891",
+        "revCount": 183,
         "type": "git",
         "url": "https://github.com/logos-blockchain/logos-execution-zone-module"
       },
       "original": {
-        "rev": "7bf906459f53f0ed324a7a0ee57159552f43b0a3",
+        "ref": "main",
         "type": "git",
         "url": "https://github.com/logos-blockchain/logos-execution-zone-module"
       }
